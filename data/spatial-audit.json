@@ -1,0 +1,16 @@
+{
+  "source": "上海建筑.zip / shanghai.shp",
+  "source_crs": "EPSG:4326",
+  "distance_crs": "EPSG:32651",
+  "building_count": 1570826,
+  "stats": {
+    "candidate": 566,
+    "inside": 136,
+    "unmatched": 65,
+    "overlapping_footprints": 1
+  },
+  "threshold_m": 120,
+  "created_at": "2026-11-01T04:36:01.794693+00:00",
+  "method": "保留CSV的wgs_lon/wgs_lat为原始点。点在面内记录inside；否则120米内最近建筑作为待核查候选，显示锚点为面内点。仅几何关联，未核验建筑名称身份；遗址、墓葬、桥梁等不一定有建筑面。shanghai51N与shanghai是同一数据的不同投影，未重复导入。",
+  "zip_sha256": "576de337e6d3d697c12acd79b24684c13202904ce219a37304cc8813dad3422e"
+}
