@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Landmark, LayoutDashboard, Database, Search, ListChecks, ClipboardCheck, FolderArchive, Download, ArrowUpRight, ChevronRight, X, Save, MapPin, RefreshCw, ShieldCheck, LogIn, AlertCircle, Menu, Pencil, FileText, CircleHelp, Plus, Minus } from 'lucide-react';
+import { Landmark, LayoutDashboard, Database, Search, ListChecks, ClipboardCheck, FolderArchive, Download, ArrowUpRight, ChevronRight, X, Save, MapPin, RefreshCw, ShieldCheck, LogIn, AlertCircle, Menu, Pencil, FileText, CircleHelp, Plus, Minus, Network, Table2 } from 'lucide-react';
 import { DIMENSIONS } from '../lib/assessment';
 import HeritageMap from './heritage-map';
+import KnowledgeGraph from './knowledge-graph';
 import { api, isPages, assetBase, signInUrl, sourceDownloadUrl } from '../lib/client-data';
 type Row=Record<string,any>;
 type Page='overview'|'map'|'catalog'|'assessment'|'indicators'|'evidence'|'review'|'sources'|'method';
@@ -27,6 +28,7 @@ export default function Workbench(){
   const [reviewScore,setReviewScore]=useState(''),[reviewNote,setReviewNote]=useState(''),[reviewOnly,setReviewOnly]=useState('attention');
   const [evidenceQuery,setEvidenceQuery]=useState(''),[evidenceScope,setEvidenceScope]=useState('site'),[evidence,setEvidence]=useState<Row|null>(null),[searching,setSearching]=useState(false),[evidenceError,setEvidenceError]=useState('');
   const [sources,setSources]=useState<Row|null>(null),[sourceError,setSourceError]=useState(''),[issueKind,setIssueKind]=useState('缺少明细');
+  const [catalogView,setCatalogView]=useState<'graph'|'list'>('graph');
   const [listPage,setListPage]=useState(0),[issuePage,setIssuePage]=useState(0);
   const searchVersion=useRef(0);
   useEffect(()=>{if(!editing)return;const previous=document.activeElement as HTMLElement|null;const dialog=document.querySelector<HTMLElement>('[role="dialog"]');dialog?.querySelector<HTMLInputElement>('input')?.focus();const trap=(e:KeyboardEvent)=>{if(e.key==='Escape'&&!busy)setEditing(false);if(e.key==='Tab'&&dialog){const controls=Array.from(dialog.querySelectorAll<HTMLElement>('button:not(:disabled),input,select,textarea,a[href]'));const first=controls[0],last=controls[controls.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}};document.addEventListener('keydown',trap);return()=>{document.removeEventListener('keydown',trap);previous?.focus();};},[editing,busy]);
@@ -68,9 +70,12 @@ export default function Workbench(){
       </>}
       {page==='map'&&<><PageHeading title="上海建筑与文物地图" subtitle="道路、水系与中文地名作为背景，157万建筑轮廓统一使用你的 SHP 数据。"/><div className="object-selector"><label>定位文物</label><select aria-label="地图定位文物" value={selected} onChange={e=>setSelected(e.target.value)}>{boot.sites.map((s:Row)=><option key={s.id} value={s.id}>{s.id} · {s.name} · {s.district}</option>)}</select></div><section className="panel large-map-panel"><HeritageMap sites={boot.sites} selectedId={selected} onSelect={id=>selectSite(id)} admin={admin} onUpdated={()=>setRefresh(v=>v+1)}/></section><div className="info-banner"><MapPin size={20}/><p>136 处原始点落在建筑面内（其中1处建筑面重叠），566 处为120米内的近邻候选，65处保留原始点位。黄色锚点是待核查候选，不等同于已确认文物建筑。</p></div></>}
       {page==='catalog'&&<>
-        <PageHeading title="文物档案" subtitle="按编号、名称、地址或行政区检索，打开档案查看综合与明细评价。"><button onClick={exportCatalog}><Download size={16}/>导出当前目录</button></PageHeading>
+        <PageHeading title="文物档案" subtitle="沿图谱追溯文物关系与来源依据，或切换列表检索完整档案。"><button onClick={exportCatalog}><Download size={16}/>导出当前目录</button></PageHeading>
+        <div className="catalog-view-switch" role="group" aria-label="文物档案视图"><button aria-pressed={catalogView==='graph'} onClick={()=>setCatalogView('graph')}><Network size={16}/>知识图谱</button><button aria-pressed={catalogView==='list'} onClick={()=>setCatalogView('list')}><Table2 size={16}/>档案列表</button></div>
+        {catalogView==='graph'?<KnowledgeGraph sites={boot.sites} onOpenSite={(id,score)=>{selectSite(id);if(score)setScoreId(score);}} onSources={()=>navigate('sources')}/>:<>
         <div className="toolbar"><label className="search-field"><Search size={18}/><input aria-label="搜索文物档案" placeholder="搜索名称、地址、文物编号" value={query} onChange={e=>setQuery(e.target.value)}/></label><select aria-label="筛选行政区" value={district} onChange={e=>setDistrict(e.target.value)}><option value="">全部行政区</option>{boot.districts.map((d:Row)=><option key={d.district}>{d.district}</option>)}</select><span className="muted">{number(filtered.length)} 处文物</span>{(query||district)&&<button className="text-link" onClick={()=>{setQuery('');setDistrict('');}}>清除筛选</button>}</div>
         <div className="panel table-panel"><div className="table-scroll"><table><thead><tr><th>编号</th><th>文物名称 / 地址</th><th>行政区</th><th>保护等级</th><th>类型</th><th>明细评价</th><th/></tr></thead><tbody>{filtered.slice(listPage*30,(listPage+1)*30).map((s:Row)=><tr key={s.id}><td className="mono muted">{s.id}</td><td><button className="table-title" onClick={()=>selectSite(s.id)}>{s.name}</button><small className="table-subtitle">{s.address}</small></td><td>{s.district}</td><td><Badge tone={s.level==='国家级'?'green':'neutral'}>{s.level}</Badge></td><td>{s.type}</td><td>{s.detail_count?<span>{s.detail_count} 项<small className="table-subtitle">{s.missing_count?`${s.missing_count} 项待补充`:'分值完整'}</small></span>:<Badge tone="amber">暂无明细</Badge>}</td><td><button className="icon-button" aria-label={'查看'+s.name} onClick={()=>selectSite(s.id)}><ChevronRight size={18}/></button></td></tr>)}</tbody></table></div>{!filtered.length&&<Empty>没有匹配的文物，请调整搜索词或行政区。</Empty>}<Pagination page={listPage} count={filtered.length} size={30} onChange={setListPage}/></div>
+        </>}
       </>}
       {['assessment','review','evidence'].includes(page)&&<div className="object-selector"><label><Landmark size={18}/>当前文物</label><select aria-label="选择当前文物" value={selected} onChange={e=>setSelected(e.target.value)}>{boot.sites.map((s:Row)=><option key={s.id} value={s.id}>{s.id} · {s.name} · {s.district}</option>)}</select><button className="icon-button" aria-label={isPages?'刷新公开数据':'刷新云端数据'} onClick={()=>setRefresh(v=>v+1)}><RefreshCw size={17}/></button></div>}
       {['assessment','review'].includes(page)&&(detailLoading?<Empty>正在读取文物档案…</Empty>:detailError?<div className="alert">{detailError}<button onClick={()=>setRefresh(v=>v+1)}>重新读取</button></div>:detail&&<>
