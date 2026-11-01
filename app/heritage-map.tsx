@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { Map as LibreMap, GeoJSONSource } from 'maplibre-gl';
 import { createMapStyle, baseOpacityUpdates } from '../lib/map-style';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { api, isPages, assetUrl } from '../lib/client-data';
+import { ShardedPMTilesSource } from '../lib/sharded-pmtiles';
 import { MapPin, ArrowUpRight, RotateCcw } from 'lucide-react';
 type Row=Record<string,any>;
 let registered=false;
@@ -14,9 +16,10 @@ export default function HeritageMap({sites,onSelect,selectedId,admin=false,onUpd
   sitesRef.current=sites;openRef.current=onSelect;
   useEffect(()=>{let alive=true;let resize:ResizeObserver|undefined;
     (async()=>{const [lib,pm]=await Promise.all([import('maplibre-gl'),import('pmtiles')]);if(!alive||!el.current)return;
-      lib.setWorkerUrl('/maplibre/worker.mjs');
-      if(!registered){const protocol=new pm.Protocol();lib.addProtocol('pmtiles',protocol.tile);registered=true;}
-      const map=new lib.Map({container:el.current,center:[121.47,31.23],zoom:10,minZoom:4,maxZoom:20,attributionControl:{compact:true},style:createMapStyle(window.location.origin+'/api/map/archive')});
+      lib.setWorkerUrl(assetUrl('maplibre/worker.mjs'));
+      const archiveUrl=isPages?new URL(assetUrl('map/archive.json'),window.location.origin).href:window.location.origin+'/api/map/archive';
+      if(!registered){const protocol=new pm.Protocol();if(isPages)protocol.add(new pm.PMTiles(new ShardedPMTilesSource(archiveUrl,new URL(assetUrl(''),window.location.origin).href)));lib.addProtocol('pmtiles',protocol.tile);registered=true;}
+      const map=new lib.Map({container:el.current,center:[121.47,31.23],zoom:10,minZoom:4,maxZoom:20,attributionControl:{compact:true},style:createMapStyle(archiveUrl)});
       mapRef.current=map;map.addControl(new lib.NavigationControl({showCompass:true}),'top-right');map.addControl(new lib.ScaleControl({unit:'metric'}),'bottom-left');
       map.on('error',e=>{if(!alive)return;if((e as unknown as {sourceId?:string}).sourceId==='openmaptiles')setMapError('开源底图暂未加载，可继续查看建筑和文物图层。');else if((e as unknown as {sourceId?:string}).sourceId==='buildings')setMapError('建筑图层正在加载或暂不可用，请稍后重试。');});
       map.on('zoomend',()=>{if(alive)setZoom(map.getZoom());});
@@ -44,7 +47,7 @@ export default function HeritageMap({sites,onSelect,selectedId,admin=false,onUpd
     if(selectedId)selectRef.current(selectedId);else if(valid.length&&valid.length<30){const xs=valid.map(s=>s.map_lon??s.longitude),ys=valid.map(s=>s.map_lat??s.latitude);map.fitBounds([[Math.min(...xs),Math.min(...ys)],[Math.max(...xs),Math.max(...ys)]],{padding:60,maxZoom:16,duration:500});}
   },[ready,sites,selectedId]);
   selectRef.current=async(id:string)=>{const map=mapRef.current;if(!map)return;const site=sitesRef.current.find(s=>s.id===id);if(!site)return;pending.current?.abort();const ctrl=new AbortController();pending.current=ctrl;setPicked(site);setMatch(null);setNote('');setCandidate('');(map.getSource('selected-building') as GeoJSONSource)?.setData({type:'FeatureCollection',features:[]});(map.getSource('selected-line') as GeoJSONSource)?.setData({type:'FeatureCollection',features:[]});map.flyTo({center:[site.map_lon??site.longitude,site.map_lat??site.latitude],zoom:18,duration:700});
-    try{const r=await fetch('/api/map/match/'+encodeURIComponent(id),{signal:ctrl.signal});const d=await r.json() as Row;if(!r.ok)throw Error(d.error);setMatch(d);setCandidate(d.building_id||'');if(d.geometry){(map.getSource('selected-building') as GeoJSONSource).setData({type:'Feature',geometry:JSON.parse(d.geometry),properties:{}});(map.getSource('selected-line') as GeoJSONSource).setData({type:'Feature',geometry:{type:'LineString',coordinates:[[d.original_lon,d.original_lat],[d.longitude,d.latitude]]},properties:{}});}}catch(e){if((e as Error).name!=='AbortError')setMapError((e as Error).message);}
+    try{const d=await api('map/match/'+encodeURIComponent(id),{signal:ctrl.signal});setMatch(d);setCandidate(d.building_id||'');if(d.geometry){(map.getSource('selected-building') as GeoJSONSource).setData({type:'Feature',geometry:JSON.parse(d.geometry),properties:{}});(map.getSource('selected-line') as GeoJSONSource).setData({type:'Feature',geometry:{type:'LineString',coordinates:[[d.original_lon,d.original_lat],[d.longitude,d.latitude]]},properties:{}});}}catch(e){if((e as Error).name!=='AbortError')setMapError((e as Error).message);}
   };
   useEffect(()=>{if(ready)for(const id of ['building-fill','building-outline','selected-building-fill','selected-building-line'])mapRef.current?.setLayoutProperty(id,'visibility',showBuildings?'visible':'none');},[showBuildings,ready]);
   useEffect(()=>{if(ready)mapRef.current?.setLayoutProperty('originals','visibility',showOriginal?'visible':'none');},[showOriginal,ready]);
