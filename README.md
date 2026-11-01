@@ -12,11 +12,11 @@
 
 ## 使用
 
-公开访问者可检索文物、查看五维评分与证据、下载原始数据和报告。管理员登录后，可以编辑档案、保存专家复核及评价快照。首页点位图采用 CSV 的 `wgs_lon/wgs_lat`，不推断保护范围或风险半径。
+公开访问者可检索文物、查看五维评分与证据、下载原始数据和报告。管理员登录后，可以编辑档案、保存专家复核及评价快照。原始坐标采用 CSV 的 `wgs_lon/wgs_lat`，地图可同时查看原始点和建筑关联锚点，不推断保护范围或风险半径。
 
 ## 上海建筑地图
 
-开源地图引擎 MapLibre GL 叠加 OpenStreetMap 标准底图和用户提供的 1,570,826 个建筑面。建筑切成 14—16 级 PMTiles 矢量瓦片，放大时按 HTTP Range 从 R2 加载，支持继续放大到20级。不会一次把全市157万建筑下载到浏览器。底图按当前视野从 OSM 请求，保留来源署名，不批量抓取或离线缓存第三方瓦片。
+开源地图引擎 MapLibre GL 使用 OpenFreeMap / OpenMapTiles 矢量道路水系底图。自定义样式仅允许道路、轨道、水系、绿地及中文地名，不渲染 OSM 建筑块，不使用含建筑的栅格底图。建筑轮廓唯一来源为用户提供的 1,570,826 个建筑面。建筑切成 14—16 级 PMTiles 矢量瓦片，放大时按 HTTP Range 从 R2 加载，支持继续放大到20级。不会一次把全市157万建筑下载到浏览器。底图按当前视野从 OpenFreeMap 请求，保留 OpenFreeMap、OpenMapTiles、OpenStreetMap 来源署名。样式定义在 `lib/map-style.ts`，建筑图层与底图透明度独立控制。
 
 `上海建筑.zip` 同时包含 EPSG:4326 的 `shanghai.shp` 和 EPSG:32651 的 `shanghai51N.shp`；本项目只导入前者，距离在 UTM 51N 下计算。136处原始点落在建筑面内（其中1处重叠），566处为120米内近邻候选，65处无候选。候选点显示到建筑内部但明确标注待核查，保留原始点位；管理员可从前三个候选中核查并确认，确认结果与理由留档。几何邻近不等于已验证的文物身份；开放遗址等可能不对应建筑。
 
@@ -30,6 +30,8 @@ ogr2ogr -f PMTiles data/shanghai-buildings.pmtiles data/building-source/shanghai
 追加本地迁移 `drizzle/0001_brief_agent_brand.sql` 后，用 `python scripts/seed-local.py data/spatial-seed.json` 导入匹配结果。生产环境运行同一个 `import-data.mjs`，stdin配置加 `seed_path: "data/spatial-seed.json"`；再运行 `node scripts/upload-map.mjs`，通过隐藏stdin提供 `url`、`token`（私有站点可附 `bypass`）。原始SHP及158MB瓦片不进入GitHub或Worker代码包，而存储在本地归档与R2地图对象中。
 
 当前证据检索是对已导入文本的关键词查询，未接入大模型、向量服务和 PDF OCR，不生成新的 AI 分值。明细均值仅为描述统计；CSV 综合评分独立保留。
+
+坐标复核结果见 `data/coordinate-audit.json`：抽样102个建筑，EPSG:4326转EPSG:32651与原始UTM文件一致；SHP转换为EPSG:3857瓦片后最大轮廓偏差为0.101米（Web Mercator平面单位，瓦片量化误差）。未发现轴顺序或投影错误。该检查不证明源文件的绝对定位精度或与OSM建筑采集时间、轮廓的一致性，未施加经验性GCJ-02平移。`scripts/audit-map-crs.py`可复核；需要将shanghai51N的shp/shx/prj解压到同一忽略目录。
 
 ## 数据与部署
 
@@ -56,6 +58,7 @@ node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1
 npx tsc --noEmit
 node --experimental-strip-types scripts/test-assessment.mjs
 node scripts/test-api.mjs
+node --experimental-strip-types scripts/test-map-style.mjs
 npm run build
 ```
 
