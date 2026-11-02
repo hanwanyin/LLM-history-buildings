@@ -80,6 +80,10 @@ for (let start = 0; start < archive.length; start += size) {
   shards.push({ file, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') });
 }
 await write('map/archive.json', { version: 1, bytes: archive.length, chunk_size: size, sha256: digest, shards });
+const knowledge=await request('knowledge/published');
+await fs.mkdir(path.join(staging,'knowledge-files'),{recursive:true});
+for(const doc of knowledge.documents){if(doc.filename){const bytes=await request('knowledge/download/'+encodeURIComponent(doc.id),true);if(createHash('sha256').update(bytes).digest('hex')!==doc.sha256)throw Error('Supplement checksum mismatch');await fs.writeFile(path.join(staging,'knowledge-files',doc.id),bytes);}}
+await write('snapshot/knowledge.json',knowledge);
 await write('snapshot/bootstrap.json', boot);
 await write('snapshot/sources.json', sources);
 await write('snapshot/evidence.json', evidence);

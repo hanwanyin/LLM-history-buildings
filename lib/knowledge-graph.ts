@@ -1,7 +1,7 @@
 export type EntityKind = 'site' | 'district' | 'level' | 'type' | 'attribute' | 'indicator' | 'dimension' | 'source';
 export type RelationKind = 'district' | 'level' | 'type' | 'attribute' | 'score' | 'dimension' | 'source';
-export type GraphNode = { id: string; label: string; kind: EntityKind; siteId?: string; scoreId?: string; field?: string; value?: string; score?: number | null; district?: string };
-export type GraphEdge = { id: string; source: string; target: string; label: string; kind: RelationKind; siteId?: string; field?: string; scoreId?: string };
+export type GraphNode = { id: string; label: string; kind: EntityKind; siteId?: string; scoreId?: string; documentId?: string; field?: string; value?: string; score?: number | null; district?: string };
+export type GraphEdge = { id: string; source: string; target: string; label: string; kind: RelationKind; siteId?: string; field?: string; scoreId?: string; documentId?: string };
 export type KnowledgeGraph = { nodes: GraphNode[]; edges: GraphEdge[] };
 export type GraphPoint = { x: number; y: number };
 export type ArchiveSite = { id: string; name: string; district: string; level?: string; type?: string; address?: string; [key: string]: any };
@@ -47,6 +47,10 @@ export function buildSiteGraph(detail: SiteGraphDetail): KnowledgeGraph {
       { id:score.id+':dimension', source:indicator, target:dimension, label:'归属维度', kind:'dimension', siteId:detail.site.id, scoreId:score.id },
       { id:score.id+':source', source:indicator, target:source, label:'记录于', kind:'source', siteId:detail.site.id, scoreId:score.id },
     );
+  }
+  for(const doc of detail.supplements||[]){
+    const id='document:'+doc.id;nodes.set(id,{id,label:doc.title,kind:'source',siteId:detail.site.id,documentId:doc.id});
+    graph.edges.push({id:from+':document:'+doc.id,source:from,target:id,label:'补充资料',kind:'source',siteId:detail.site.id,documentId:doc.id});
   }
   const csv = detail.dimensions[0]?.filename;
   if (csv) {

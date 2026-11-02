@@ -16,7 +16,7 @@
     "db:generate": "drizzle-kit generate",
     "pages:export": "node scripts/export-pages.mjs",
     "pages:build": "node scripts/build-pages.mjs",
-    "pages:preview": "vite preview --config pages/vite.config.ts --host 127.0.0.1 --port 4173"
+    "pages:preview": "vite preview --config public-site/vite.config.ts --host 127.0.0.1 --port 4173"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -28,6 +28,8 @@
     "date-fns": "^4.4.0",
     "drizzle-orm": "0.45.2",
     "embla-carousel-react": "^8.6.0",
+    "fast-xml-parser": "^5.11.2",
+    "fflate": "^0.8.3",
     "input-otp": "^1.4.2",
     "lucide-react": "^1.31.0",
     "maplibre-gl": "^6.16.0",

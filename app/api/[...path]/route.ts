@@ -1,9 +1,11 @@
+import { knowledgeGet, knowledgePost } from '../../../lib/knowledge-server';
 import { env } from 'cloudflare:workers';
 import { database, json, identity, authorize, body, textValue, siteDetail, scoreQuery, HttpError, handleError } from '../../../lib/server';
 export const dynamic='force-dynamic';
 function path(req:Request){return new URL(req.url).pathname.replace(/^\/api\//,'').split('/').map(decodeURIComponent);}
 export async function GET(req:Request){try{
   const [kind,id,action]=path(req);const db=database();const url=new URL(req.url);
+  if(kind==='knowledge')return await knowledgeGet(req,id,action);
   if(kind==='bootstrap'){
     const results=await db.batch([
       db.prepare(`SELECT (SELECT COUNT(*) FROM heritage_sites) AS sites,(SELECT COUNT(*) FROM scores) AS scores,(SELECT COUNT(*) FROM indicators) AS indicators,(SELECT COUNT(*) FROM sources) AS sources,(SELECT COUNT(*) FROM scores WHERE score IS NULL) AS missing,(SELECT COUNT(*) FROM current_reviews) AS reviewed,(SELECT COUNT(*) FROM data_issues) AS issues,(SELECT COUNT(DISTINCT site_id) FROM scores) AS detailed_sites,(SELECT COUNT(*) FROM assessment_runs) AS runs`),
@@ -54,7 +56,8 @@ export async function PATCH(req:Request){try{
 }catch(e){return handleError(e);}}
 
 export async function POST(req:Request){try{
-  const [kind,id]=path(req);const db=database();
+  const [kind,id,action]=path(req);const db=database();
+  if(kind==='knowledge')return await knowledgePost(req,id,action);
   if(kind==='map-upload'){await authorize(req,true);return await uploadMap(req,id);}
   if(kind==='import'){await authorize(req,true);return await importBatch(req);}
   if(kind==='source-files'){

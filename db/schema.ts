@@ -62,3 +62,18 @@ export const spatialMatches = sqliteTable('spatial_matches', {
   height: real('height'), geometry: text('geometry'), candidates: text('candidates').notNull(),
   revision: integer('revision').notNull().default(1), updatedAt: text('updated_at').notNull(),
 });
+
+// Unreviewed material is isolated from the original public source tables.
+export const knowledgeDocuments=sqliteTable('knowledge_documents',{
+  id:text('id').primaryKey(),siteId:text('site_id').references(()=>sites.id),title:text('title').notNull(),kind:text('kind').notNull(),
+  filename:text('filename'),mime:text('mime'),size:integer('size'),sha256:text('sha256'),objectKey:text('object_key'),
+  sourceUrl:text('source_url'),publisher:text('publisher'),publishedAt:text('published_at'),locator:text('locator').notNull(),
+  content:text('content').notNull(),extractionNote:text('extraction_note').notNull(),fingerprint:text('fingerprint').notNull(),
+  status:text('status').notNull().default('pending'),createdBy:text('created_by').notNull(),createdAt:text('created_at').notNull(),
+  reviewedBy:text('reviewed_by'),reviewedAt:text('reviewed_at'),reviewNote:text('review_note'),revision:integer('revision').notNull().default(1),
+},t=>[uniqueIndex('knowledge_fingerprint_unique').on(t.fingerprint),index('knowledge_site_status_idx').on(t.siteId,t.status)]);
+export const researchJobs=sqliteTable('research_jobs',{
+  id:text('id').primaryKey(),siteId:text('site_id').references(()=>sites.id),query:text('query').notNull(),providers:text('providers').notNull(),
+  status:text('status').notNull(),steps:text('steps').notNull(),resultIds:text('result_ids').notNull(),actor:text('actor').notNull(),
+  createdAt:text('created_at').notNull(),finishedAt:text('finished_at'),
+});

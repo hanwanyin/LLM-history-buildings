@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
 export default defineConfig({
-  root: path.resolve('pages'),
+  root: path.resolve('public-site'),
   base: '/LLM-history-buildings/',
   publicDir: path.resolve('work/pages-public'),
   plugins: [react()],

@@ -16,7 +16,7 @@ async function snapshot(file: string, options: RequestInit = {}): Promise<Row> {
 let evidencePromise: Promise<Row[]> | undefined;
 export async function api(path: string, options: RequestInit = {}): Promise<Row> {
   if (!isPages) {
-    const response = await fetch('/api/' + path, { ...options, headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers } });
+    const response = await fetch('/api/' + path, { ...options, headers: { ...(options.body && !(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}), ...options.headers } });
     const data = await response.json() as Row;
     if (!response.ok) throw Error(data.error || '请求失败');
     return data;
@@ -24,6 +24,7 @@ export async function api(path: string, options: RequestInit = {}): Promise<Row>
   if (options.method && options.method.toUpperCase() !== 'GET') throw Error('此站为公开浏览版。请前往原管理站修改，再同步发布到此站。');
   const url = new URL(path, 'https://snapshot.invalid/');
   const parts = url.pathname.slice(1).split('/').map(decodeURIComponent);
+  if (parts[0] === 'knowledge' && parts[1] === 'published') return snapshot('knowledge', options);
   if (parts[0] === 'bootstrap' || parts[0] === 'sources') return snapshot(parts[0], options);
   if (parts[0] === 'sites' || parts[0] === 'assessments') {
     if (!/^[A-Za-z0-9_-]+$/.test(parts[1] || '')) throw Error('记录编号无效。');
@@ -47,3 +48,6 @@ export async function api(path: string, options: RequestInit = {}): Promise<Row>
   }
   throw Error('此功能请前往原管理站使用。');
 }
+
+export const knowledgeDownloadUrl=(id:string)=>isPages?assetUrl('knowledge-files/'+encodeURIComponent(id)):('/api/knowledge/download/'+encodeURIComponent(id));
+export function managementUrl(page='sources',tab='upload',lang='zh'){const returnTo='/?'+new URLSearchParams({page,tab,lang});return (isPages?managementOrigin:'')+'/signin-with-chatgpt?return_to='+encodeURIComponent(returnTo);}

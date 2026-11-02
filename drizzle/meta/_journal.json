@@ -15,6 +15,13 @@
       "when": 1793507781800,
       "tag": "0001_brief_agent_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793610044844,
+      "tag": "0002_parallel_microchip",
+      "breakpoints": true
     }
   ]
 }

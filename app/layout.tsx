@@ -3,8 +3,8 @@ import "./workbench.css";
 import "./map.css";
 
 export const metadata: Metadata = {
-  title: "上海文物 · 敏感性评价工作台",
-  description: "上海不可移动文物基础档案、五维敏感性评价、来源证据与专家复核。",
+  title: "文物资源评估及规划响应平台 · HVRP",
+  description: "HVRP：文物资源档案、敏感性评价、证据知识库及规划响应研究。",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

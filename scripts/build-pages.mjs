@@ -9,6 +9,6 @@ for (const [from, to] of [
   ['public/favicon.svg', 'favicon.svg'],
 ]) await fs.copyFile(from, 'work/pages-public/' + to);
 await fs.writeFile('work/pages-public/.nojekyll', '');
-const build = spawnSync(process.execPath, ['node_modules/vite/bin/vite.js', 'build', '--config', 'pages/vite.config.ts'], { stdio: 'inherit' });
+const build = spawnSync(process.execPath, ['node_modules/vite/bin/vite.js', 'build', '--config', 'public-site/vite.config.ts'], { stdio: 'inherit' });
 if (build.status !== 0) process.exit(build.status || 1);
 console.log('GitHub Pages build ready: outputs/github-pages');
