@@ -47,6 +47,12 @@ await Promise.all(Array.from({ length: 5 }, async () => {
     if (++completed % 100 === 0) console.log(`Public records: ${completed}/${boot.sites.length}`);
   }
 }));
+// Derive map scores from the same public production records, including when
+// the management server has not yet adopted the expanded bootstrap response.
+boot.mapScores = details.flatMap(detail => detail.dimensions.map(row => ({
+  site_id: detail.site.id, dimension: row.dimension, score: row.score,
+})));
+if (boot.mapScores.length !== boot.sites.length * 5 || new Set(boot.mapScores.map(row => row.site_id + '|' + row.dimension)).size !== boot.mapScores.length) throw Error('Dimension score reconciliation failed.');
 const evidence = details.flatMap(detail => detail.scores.map(score => ({
   id: score.id, site_id: detail.site.id, site_name: detail.site.name,
   score: score.score, confidence: score.confidence, evidence: score.evidence,

@@ -22,9 +22,12 @@ async function moduleFrom(file, prefix = '') {
 const client = await moduleFrom('lib/client-data.ts', 'const __PAGES_MIRROR__=true; const __PAGES_BASE__="/LLM-history-buildings/";\n');
 const { ShardedPMTilesSource } = await moduleFrom('lib/sharded-pmtiles.ts');
 const boot = await client.api('bootstrap');
+assert.equal(boot.mapScores.length, 767 * 5);
+assert.equal(new Set(boot.mapScores.map(row => row.site_id + '|' + row.dimension)).size, 767 * 5);
 assert.equal(boot.stats.sites, 767); assert.equal(boot.user.admin, false); assert.ok(boot.snapshot.exported_at);
 const detail = await client.api('sites/G-1');
 assert.equal(detail.scores.length, 27);
+for (const row of detail.dimensions) assert.equal(boot.mapScores.find(score => score.site_id === 'G-1' && score.dimension === row.dimension).score, row.score);
 assert.deepEqual(await client.api('map/match/G-1'), detail.spatial);
 const missingDetail = await client.api('sites/' + boot.sites.find(row => row.detail_count === 0).id);
 assert.equal(missingDetail.scores.length, 0); assert.equal(missingDetail.dimensions.length, 5);
