@@ -52,7 +52,7 @@ export default function KnowledgeGraph({sites,onOpenSite,onSources,selectedSiteI
     const values=visible.nodes.map(node=>points.get(node.id)).filter((point):point is GraphPoint=>!!point);
     if(!values.length){setView({x:500,y:centerY,k:1});return;}
     const xs=values.map(point=>point.x),ys=values.map(point=>point.y),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
-    const k=Math.min(embedded&&!expanded?1.35:1.65,(embedded?680:800)/Math.max(150,maxX-minX),460/Math.max(150,maxY-minY));
+    const k=Math.min(embedded&&!expanded?2.1:1.65,(embedded?820:800)/Math.max(150,maxX-minX),(embedded?600:460)/Math.max(150,maxY-minY));
     setView({x:500-(minX+maxX)/2*k,y:centerY-(minY+maxY)/2*k,k});
   };
   useEffect(()=>{setPositions(new Map(initialPositions));fit(initialPositions);},[initialPositions]); // eslint-disable-line react-hooks/exhaustive-deps
