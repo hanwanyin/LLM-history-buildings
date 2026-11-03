@@ -2,12 +2,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import dictionary from './en-ui.json';
 export type Locale='zh'|'en';
-export const brand={zh:'文物资源评估及规划响应平台',en:'Heritage Vulnerability, Resilience & Planning',short:'HVRP'};
+import {brand} from './brand';
+export {brand} from './brand';
 const LocaleContext=createContext<{locale:Locale;setLocale:(value:Locale)=>void}>({locale:'zh',setLocale:()=>{}});
 export function LocaleProvider({children}:{children:React.ReactNode}){
   const [locale,setLocale]=useState<Locale>('zh');
   useEffect(()=>{try{const param=new URLSearchParams(window.location.search).get('lang');if(param==='en'||(!param&&localStorage.getItem('hvrp-language')==='en'))setLocale('en');}catch{}},[]);
-  useEffect(()=>{document.documentElement.lang=locale==='zh'?'zh-CN':'en';document.title=locale==='zh'?brand.zh+' · HVRP':brand.en+' · HVRP';try{localStorage.setItem('hvrp-language',locale);}catch{}},[locale]);
+  useEffect(()=>{document.documentElement.lang=locale==='zh'?'zh-CN':'en';document.title=locale==='zh'?brand.zh:brand.en+' – '+brand.full;try{localStorage.setItem('hvrp-language',locale);}catch{}},[locale]);
   const chooseLocale=(value:Locale)=>{setLocale(value);const url=new URL(window.location.href);url.searchParams.set('lang',value);window.history.replaceState(null,'',url);};
   return <LocaleContext.Provider value={{locale,setLocale:chooseLocale}}>{children}</LocaleContext.Provider>;
 }

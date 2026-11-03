@@ -1,4 +1,4 @@
-# 文物资源评估及规划响应平台 · HVRP
+# HERISK · 文垣智评
 
 将原 `index.html` 演示工作台改造为有云端数据库、来源归档与管理员权限的应用。
 
@@ -31,7 +31,7 @@ ogr2ogr -f PMTiles data/shanghai-buildings.pmtiles data/building-source/shanghai
 
 “证据检索”查询已导入原文；“数据与来源”新增真实检索 Agent（上海博物馆官方检索、Crossref 学术元数据）和文件上传。新增资料先进入私有待审区，经管理员核对来源、文物关联并填写审核理由后公开。文件上限10MB，支持 XLSX、CSV、DOCX、TXT、MD、JSON、PDF；PDF 须提供原文摘录和页码。没有接入大模型、向量服务和 PDF OCR，不生成新的 AI 分值。明细均值仅为描述统计；CSV 综合评分独立保留。
 
-平台现名“文物资源评估及规划响应平台”，英文为 Heritage Vulnerability, Resilience & Planning（HVRP）。左上角切换中英文，操作界面与说明双语，原始证据和文物名称保留原文。知识库解释与平台结构见 `docs/HVRP-platform-and-knowledge-base.md`；公开站发布和资料同步方法见 `docs/github-pages.md`。
+平台现名“HERISK · 文垣智评”，英文为 Heritage Resilience & Intervention Spatial Knowledge platform（HERISK）。页首切换中英文，操作界面与说明双语，原始证据和文物名称保留原文。知识库解释与平台结构见 `docs/HERISK-platform-and-knowledge-base.md`；公开站发布和资料同步方法见 `docs/github-pages.md`。
 
 坐标复核结果见 `data/coordinate-audit.json`：抽样102个建筑，EPSG:4326转EPSG:32651与原始UTM文件一致；SHP转换为EPSG:3857瓦片后最大轮廓偏差为0.101米（Web Mercator平面单位，瓦片量化误差）。未发现轴顺序或投影错误。该检查不证明源文件的绝对定位精度或与OSM建筑采集时间、轮廓的一致性，未施加经验性GCJ-02平移。`scripts/audit-map-crs.py`可复核；需要将shanghai51N的shp/shx/prj解压到同一忽略目录。
 

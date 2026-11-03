@@ -501,5 +501,7 @@
   "已审核补充资料": "Approved supplementary source",
   "审核依据": "Review rationale",
   "打开原始来源": "Open original source",
-  "证据检索返回已导入 Excel 的文本及出处。资料补充 Agent 可查询上海博物馆官方资料与 Crossref 学术元数据，检索结果须审核后公开。当前未接入大模型推理、向量检索或 PDF OCR；补充资料不自动覆盖原始评分。": "Evidence search retrieves imported Excel text and provenance. The source-discovery agent queries Shanghai Museum and Crossref scholarly metadata; results require review before publication. LLM inference, vector search and PDF OCR are not connected. Supplementary sources do not overwrite original scores."
+  "证据检索返回已导入 Excel 的文本及出处。资料补充 Agent 可查询上海博物馆官方资料与 Crossref 学术元数据，检索结果须审核后公开。当前未接入大模型推理、向量检索或 PDF OCR；补充资料不自动覆盖原始评分。": "Evidence search retrieves imported Excel text and provenance. The source-discovery agent queries Shanghai Museum and Crossref scholarly metadata; results require review before publication. LLM inference, vector search and PDF OCR are not connected. Supplementary sources do not overwrite original scores.",
+  "文物风险总览": "Heritage risk atlas",
+  "数据总览": "Data overview"
 }

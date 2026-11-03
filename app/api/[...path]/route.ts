@@ -12,9 +12,10 @@ export async function GET(req:Request){try{
       db.prepare(`SELECT h.id,h.name,h.district,h.address,h.level,h.type,h.longitude,h.latitude,m.longitude AS map_lon,m.latitude AS map_lat,m.status AS match_status,m.distance_m,m.building_id,COUNT(s.id) AS detail_count,COUNT(CASE WHEN s.score IS NULL AND s.id IS NOT NULL THEN 1 END) AS missing_count FROM heritage_sites h LEFT JOIN scores s ON s.site_id=h.id LEFT JOIN spatial_matches m ON m.site_id=h.id GROUP BY h.id ORDER BY h.id`),
       db.prepare('SELECT * FROM indicators ORDER BY position'),
       db.prepare('SELECT district,COUNT(*) AS count FROM heritage_sites GROUP BY district ORDER BY count DESC'),
-      db.prepare(`SELECT i.dimension,COUNT(*) AS total,COUNT(s.score) AS valid,AVG(s.score) AS average,SUM(CASE WHEN s.confidence='低' THEN 1 ELSE 0 END) AS low FROM scores s JOIN indicators i ON i.id=s.indicator_id GROUP BY i.dimension`)
+      db.prepare(`SELECT i.dimension,COUNT(*) AS total,COUNT(s.score) AS valid,AVG(s.score) AS average,SUM(CASE WHEN s.confidence='低' THEN 1 ELSE 0 END) AS low FROM scores s JOIN indicators i ON i.id=s.indicator_id GROUP BY i.dimension`),
+      db.prepare('SELECT site_id,dimension,score FROM dimension_scores ORDER BY site_id,dimension')
     ]);
-    const user=identity(req);return json({stats:results[0].results[0],sites:results[1].results,indicators:results[2].results,districts:results[3].results,dimensions:results[4].results,user:{signedIn:user.signedIn,admin:user.admin,email:user.signedIn?user.email:null},storage:'Cloudflare D1'});
+    const user=identity(req);return json({stats:results[0].results[0],sites:results[1].results,indicators:results[2].results,districts:results[3].results,dimensions:results[4].results,mapScores:results[5].results,user:{signedIn:user.signedIn,admin:user.admin,email:user.signedIn?user.email:null},storage:'Cloudflare D1'});
   }
   if(kind==='map'&&id==='archive')return await mapArchive(req);
   if(kind==='map'&&id==='match'&&action){const r=await db.prepare('SELECT * FROM spatial_matches WHERE site_id=?').bind(action).first();if(!r)throw new HttpError(404,'该文物尚未完成建筑匹配。');return json(r);}

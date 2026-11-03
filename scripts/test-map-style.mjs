@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {createMapStyle, baseLayers, baseOpacityUpdates} from '../lib/map-style.ts';
 const style=createMapStyle('https://example.com/api/map/archive');
-const allowed=new Set(['landcover','park','water','waterway','transportation','transportation_name','water_name','place']);
+const allowed=new Set(['landcover','park','water','waterway','transportation','transportation_name','water_name','place','boundary']);
 for(const layer of baseLayers){
   assert.notEqual(layer.type,'raster','Raster imagery can contain inseparable building blocks');
   assert.notEqual(layer.type,'fill-extrusion','Basemap must not contain 3D buildings');
