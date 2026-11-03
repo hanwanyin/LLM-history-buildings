@@ -1,18 +1,19 @@
-export type EntityKind = 'site' | 'district' | 'level' | 'type' | 'attribute' | 'indicator' | 'dimension' | 'source';
-export type RelationKind = 'district' | 'level' | 'type' | 'attribute' | 'score' | 'dimension' | 'source';
-export type GraphNode = { id: string; label: string; kind: EntityKind; siteId?: string; scoreId?: string; documentId?: string; field?: string; value?: string; score?: number | null; district?: string };
+export type EntityKind = 'building' | 'site' | 'district' | 'level' | 'type' | 'attribute' | 'indicator' | 'dimension' | 'source';
+export type RelationKind = 'spatial' | 'district' | 'level' | 'type' | 'attribute' | 'score' | 'dimension' | 'source';
+export type GraphNode = { id: string; label: string; kind: EntityKind; siteId?: string; scoreId?: string; documentId?: string; field?: string; value?: string; score?: number | null; district?: string; buildingId?: string };
 export type GraphEdge = { id: string; source: string; target: string; label: string; kind: RelationKind; siteId?: string; field?: string; scoreId?: string; documentId?: string };
 export type KnowledgeGraph = { nodes: GraphNode[]; edges: GraphEdge[] };
 export type GraphPoint = { x: number; y: number };
 export type ArchiveSite = { id: string; name: string; district: string; level?: string; type?: string; address?: string; [key: string]: any };
 export type SiteGraphDetail = { site: ArchiveSite; scores: Record<string, any>[]; dimensions: Record<string, any>[]; [key: string]: any };
 export const entityStyles: Record<EntityKind, { label: string; color: string }> = {
+  building: { label: '建筑轮廓', color: '#b39256' },
   site: { label: '文物', color: '#287c70' }, district: { label: '行政区', color: '#668ca7' },
   level: { label: '保护等级', color: '#b68b4d' }, type: { label: '文物类型', color: '#8c78a5' },
   attribute: { label: '档案属性', color: '#789369' }, indicator: { label: '评价指标', color: '#508f9d' },
   dimension: { label: '评价维度', color: '#bd7881' }, source: { label: '来源文件', color: '#8d8b6a' },
 };
-export const relationLabels: Record<RelationKind, string> = { district:'位于行政区', level:'保护等级', type:'文物类型', attribute:'档案属性', score:'评价指标', dimension:'归属维度', source:'来源文件' };
+export const relationLabels: Record<RelationKind, string> = { spatial:'建筑空间关联', district:'位于行政区', level:'保护等级', type:'文物类型', attribute:'档案属性', score:'评价指标', dimension:'归属维度', source:'来源文件' };
 const fields = [['district','位于','district'],['level','保护等级','level'],['type','文物类型','type']] as const;
 const siteNode = (site: ArchiveSite): GraphNode => ({ id:'site:'+site.id, label:site.name, kind:'site', siteId:site.id, district:site.district });
 export function buildCatalogGraph(sites: ArchiveSite[]): KnowledgeGraph {
@@ -51,6 +52,13 @@ export function buildSiteGraph(detail: SiteGraphDetail): KnowledgeGraph {
   for(const doc of detail.supplements||[]){
     const id='document:'+doc.id;nodes.set(id,{id,label:doc.title,kind:'source',siteId:detail.site.id,documentId:doc.id});
     graph.edges.push({id:from+':document:'+doc.id,source:from,target:id,label:'补充资料',kind:'source',siteId:detail.site.id,documentId:doc.id});
+  }
+  const match=detail.spatial;
+  if(match?.building_id){
+    const id='building:'+match.building_id;
+    nodes.set(id,{id,label:'SHP '+match.building_id,kind:'building',siteId:detail.site.id,buildingId:String(match.building_id)});
+    const label=match.status==='confirmed'?'已确认建筑关联':match.status==='inside'?'面内几何关联':'候选建筑关联（待核查）';
+    graph.edges.push({id:from+':building',source:from,target:id,label,kind:'spatial',siteId:detail.site.id});
   }
   const csv = detail.dimensions[0]?.filename;
   if (csv) {
@@ -115,4 +123,15 @@ export function layoutGraph(graph: KnowledgeGraph): Map<string, GraphPoint> {
     for(const p of points){const anchor=!small&&(p.node.kind==='site'||p.node.kind==='district')?.04:0;p.vx=(p.vx-p.x*.0015+(p.anchorX-p.x)*anchor)*.72;p.vy=(p.vy-p.y*.0015+(p.anchorY-p.y)*anchor)*.72;p.x+=Math.max(-8,Math.min(8,p.vx));p.y+=Math.max(-8,Math.min(8,p.vy));}
   }
   return new Map(points.map(point=>[point.node.id,{x:point.x,y:point.y}]));
+}
+
+export function buildFootprintGraph(building:{building_id:string;height?:number|null}):KnowledgeGraph {
+ const id='building:'+building.building_id;
+ const nodes:GraphNode[]=[{id,label:'SHP '+building.building_id,kind:'building',buildingId:building.building_id},{id:'source:shp',label:'上海建筑.zip',kind:'source'}];
+ const edges:GraphEdge[]=[{id:id+':source',source:id,target:'source:shp',label:'建筑轮廓来源',kind:'source'}];
+ if(typeof building.height==='number'&&Number.isFinite(building.height)){
+  nodes.push({id:id+':height',label:'SHP height = '+building.height,kind:'attribute'});
+  edges.push({id:id+':height',source:id,target:id+':height',label:'原始高度字段',kind:'attribute'});
+ }
+ return {nodes,edges};
 }

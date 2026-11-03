@@ -1,34 +1,27 @@
 # HERISK · 文垣智评
 
-本次以用户给出的深浅两版地图工作台、平台名片为设计依据：菱形徽标、暖白/深绿底色、金色强调，紧凑页首与标题下版权信息。平台全称为 **Heritage Resilience & Intervention Spatial Knowledge platform**。Slogan：**Mapping heritage risk contagion for urban resilience — 迹察风险，城铸韧性。**
+文物风险评估计算工作台。保留菱形徽标、深绿/暖白双主题、金色强调、标题下版权、中英文切换与平台名片弹窗。
 
-## 界面结构
+## 计算工作流
 
-- 左栏：767 处真实文物资源、名称/地址/编号检索、行政区筛选、可滚动目录、工作台入口。
-- 中栏：上海可缩放地图，五维原始敏感性着色，等级筛选、边界线、SHP 建筑、原始点位、文物标签与视图重置。
-- 右栏：默认显示平台名片与操作路径；选择文物后显示五维评分、原文证据、CSV 行号、建筑候选和完整档案入口。
-- 顶部：品牌名片、规划知识库、主题切换、中英文切换、导航。平台名片以模态弹窗打开，支持 Esc、关闭按钮和背景点击关闭；键盘焦点保留在弹窗内。
+仅保留计算端：数据管理 → 本体评价 → 建筑群风险计算 → 渗流分析与范围识别 → 成果核验与发布。顶部同时列出原有档案、指标、证据、专家复核、上传/Agent、建筑地图、数据统计和知识库结构入口。无规划展示应用端。
 
-深浅两版切换会同时更新地图底图颜色与其他模块界面，主题保存在当前浏览器。版权署名采用用户参考图提供的机构文字。原数据、来源与管理权限保持独立。
+## 首页
 
-## 数据与能力边界
+顶部六项全库统计：文物档案、指标评分、明细覆盖、缺失评分、建筑几何关联、专家复核。详细统计可展开查看五维均值和数据质量。
 
-地图颜色来自 CSV 中保留的五维原始分值：高敏感性为4—5，中为3，低为1—2；空值和原始0分保持待核查，不转换为低风险。“本底塑造、开发建设、活动利用、污染安全、舆论引导”分别对应历史价值、开发建设、活动利用、环境污染、舆论传播敏感性，不能据此直接推断韧性或危害传播概率。
+下方左侧为大幅上海建筑地图，右侧为接近正方形的知识图谱。统一搜索文物名称、行政区、地址或编号；两个视图共享检索范围与选中对象。图谱文物/建筑节点定位地图，地图点位/建筑轮廓同步更新图谱。分类节点同步筛选关联档案。档案页只呈现记录，不再重复放置图谱。
 
-用户提供的 LLM 平台简介收录于名片的“平台愿景”。现有版本已具备档案、评分、证据图谱、来源检索、文件上传与人工审核；尚未接入经过验证的 LLM 推理、跨建筑危害传播和自动干预分区模型。综合风险入口明确标示待接入，不绘制虚构的风险圈或法定保护范围。
+同一轮廓匹配多个档案时提供列表选择。未关联文物的普通 SHP 建筑只显示实际建筑 ID、原始高度字段和来源，不生成虚构文物属性或风险。候选关联与已确认关联明确区分。
 
-## 色彩与字体
+## 数据口径
 
-浅色：纸白 `#fcfcf7`、背景 `#e9ede5`、墨绿 `#243a32`、森林绿 `#22473d`、哑金 `#a18c56`。
-深色：底色 `#0e1714`、面板 `#17211d`、字色 `#e4e6da`、次级字色 `#9ca99f`、金色 `#cbb882`。
-HERISK 字标和关键数字使用 Arial/Helvetica 粗体，中文使用设备原生中文无衬线字体；数据标识使用等宽字体。所有字体本地可用，避免增加外部字体请求。
+767 处文物、20,304 条 Excel 指标记录、27 项指标、五个维度、6 份来源。数据使用当前数据库或标有日期的公开快照，不硬编码复核结果。地图为 CSV 原始敏感性分值：4—5 高、3 中、1—2 低；空值和0分不转换为低风险。Excel 均值排除空值，保留原值及专家修正。
 
-## Computation-first information architecture (2026-11-03)
+建筑群风险、网络渗流需接入经过验证的模型及输入；目前提供输入检查与计算请求草稿，不生成虚假计算结果。GitHub Pages 为公开快照，上传、审核与数据库写入由云端提供。
 
-The default page is now the heritage risk assessment and computation workspace. Two persistent workspace controls expose the computation and application modules. A second navigation row keeps original records/graph, indicators, evidence, expert review, uploads/Agent, building map, statistics, knowledge structure and architecture visible. The sidebar also lists both sets of five modules.
+## 视觉与交互
 
-- Computation: data management → asset assessment → building-group risk → percolation and extent identification → verification and publication.
-- Application: city risk atlas → asset profiles → building-group diagnostics → knowledge and strategies → planning feedback and output.
-- Architecture page includes all five layers from the supplied diagram, including shared services, model readiness and the data/knowledge foundation.
-- Existing calculations summarize imported scores. Group risk, percolation and RAG strategy generation remain explicitly pending validated models and inputs. Their screens expose input readiness and exportable request drafts; they never produce fabricated risk results.
-- Feedback drafts can be exported and uploaded for source review; export alone does not submit a cloud job or execute recalculation.
+浅色：纸白 #fcfcf7、背景 #e9ede5、墨绿 #243a32、森林绿 #22473d、金 #a18c56。
+深色：底色 #0e1714、面板 #17211d、字色 #e4e6da、次级 #9ca99f、金 #cbb882。
+字体使用本地 Arial/Helvetica 与中文无衬线字体。桌面以紧凑统计和地图/图谱并列为主，小屏纵向排列。图谱支持缩放、拖动、展开画布、证据详情及导出；弹窗支持 Esc 和焦点管理。

@@ -1,7 +1,7 @@
 export const brand = {
   short: 'HERISK', zh: 'HERISK · 文垣智评', en: 'HERISK',
   full: 'Heritage Resilience & Intervention Spatial Knowledge platform',
-  subtitle: { zh: '文物风险评估计算与规划响应平台', en: 'Heritage risk assessment & planning response' },
+  subtitle: { zh: '文物风险评估计算平台', en: 'Heritage risk assessment & computation' },
   slogan: { zh: '迹察风险，城铸韧性。', en: 'Mapping heritage risk contagion for urban resilience' },
   introduction: {
     en: 'HERISK is an LLM-powered spatial platform for built heritage resilience assessment under anthropogenic disturbance. It extracts heritage records from open texts, infers building attributes, evaluates vulnerability via integrated expert and local knowledge bases, simulates cross-building propagation of five hazard types, and automatically delineates intervention zones and city-wide risk areas.',

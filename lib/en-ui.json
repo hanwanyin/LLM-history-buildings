@@ -503,5 +503,14 @@
   "打开原始来源": "Open original source",
   "证据检索返回已导入 Excel 的文本及出处。资料补充 Agent 可查询上海博物馆官方资料与 Crossref 学术元数据，检索结果须审核后公开。当前未接入大模型推理、向量检索或 PDF OCR；补充资料不自动覆盖原始评分。": "Evidence search retrieves imported Excel text and provenance. The source-discovery agent queries Shanghai Museum and Crossref scholarly metadata; results require review before publication. LLM inference, vector search and PDF OCR are not connected. Supplementary sources do not overwrite original scores.",
   "文物风险总览": "Heritage risk atlas",
-  "数据总览": "Data overview"
+  "数据总览": "Data overview",
+  "建筑轮廓": "Building footprint",
+  "建筑空间关联": "Spatial building association",
+  "已确认建筑关联": "Confirmed building association",
+  "面内几何关联": "Point inside footprint",
+  "候选建筑关联（待核查）": "Candidate building (verify)",
+  "建筑轮廓来源": "Footprint source",
+  "原始高度字段": "Original height field",
+  "文物档案、属性与评分记录。知识图谱已移至计算首页，与地图联动。": "Heritage records, attributes and scores. Explore the linked graph on the computation homepage.",
+  "检索文物基础档案、评分与来源；地图和知识图谱联动请前往计算首页。": "Search heritage records, scores and sources. Explore the linked map and graph on the computation homepage."
 }

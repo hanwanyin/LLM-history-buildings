@@ -24,7 +24,7 @@ export function translateUI(value:string,locale:Locale):string{
     [/^(\d+) 项待补充$/,m=>m[1]+' missing items'],
     [/^当前缩放 (\d+) 级$/,m=>'Zoom '+m[1]],
     [/^查看(.+)$/,m=>'Open '+m[1]],
-    [/^(文物|行政区|保护等级|文物类型|档案属性|评价指标|评价维度|来源文件)：(.+)$/,m=>(all[m[1]]??m[1])+': '+translateUI(m[2],locale)],
+    [/^(文物|建筑轮廓|行政区|保护等级|文物类型|档案属性|评价指标|评价维度|来源文件)：(.+)$/,m=>(all[m[1]]??m[1])+': '+translateUI(m[2],locale)],
     [/^(.+)的直接关联$/,m=>'Direct connections to '+translateUI(m[1],locale)],
     [/^(.+) · (\d+) 条直接关系(.*)$/,m=>translateUI(m[1],locale)+' · '+m[2]+' direct connections'+m[3]],
   ];
