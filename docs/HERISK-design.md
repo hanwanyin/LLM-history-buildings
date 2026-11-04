@@ -25,3 +25,8 @@
 浅色：纸白 #fcfcf7、背景 #e9ede5、墨绿 #243a32、森林绿 #22473d、金 #a18c56。
 深色：底色 #0e1714、面板 #17211d、字色 #e4e6da、次级 #9ca99f、金 #cbb882。
 字体使用本地 Arial/Helvetica 与中文无衬线字体。桌面以紧凑统计和地图/图谱并列为主，小屏纵向排列。图谱支持缩放、拖动、展开画布、证据详情及导出；弹窗支持 Esc 和焦点管理。
+
+## Five-hazard inputs (2026-11-04)
+Building-group and percolation modules now consume user-supplied `五类风险_绘图数据` via reproducible `scripts/prepare-risk-atlas.py` derivatives. The 1,484,693 building records are counted once in 500 m EPSG:32651 cells by interior representative point, with finite-value equal-building means and maxima. All 767 supplied heritage-point records retain their source IDs and raw values; 22 sentiment gaps remain null. IDs are not silently joined to earlier SHP IDs. Existing vulnerability scores remain separate.
+
+Eight nearest-neighbour EPSG:3857 web raster previews are explicitly display-only; development imagery is the provided IDW + 300 m Gaussian field, not raw risk. Full-population statistics and cell analysis use source GeoParquet, not raster pixels. Source checksums and definitions are downloadable. Threshold connected components support four/eight-neighbour adjacency, minimum cell count and GeoJSON export with parameters; they are exploratory regions, not validated percolation, contagion probabilities, intervention zones or legal protection extents. Sentiment has no building surface and is point-only. Dark/light themes and English/Chinese labels share these distinctions.

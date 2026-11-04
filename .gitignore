@@ -51,3 +51,5 @@ yarn-error.log*
 /data/*.pmtiles
 /data/spatial-seed.json
 /public/maplibre/
+
+/.venv-risk/

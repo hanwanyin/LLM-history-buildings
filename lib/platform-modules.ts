@@ -2,8 +2,8 @@ export const platformModules={
  compute:[
   {page:'sources',zh:'数据管理',en:'Data management',status:'ready'},
   {page:'assessment',zh:'本体评价',en:'Asset assessment',status:'ready'},
-  {page:'group-risk',zh:'建筑群风险计算',en:'Building-group risk',status:'model'},
-  {page:'propagation',zh:'渗流分析与范围识别',en:'Percolation & extents',status:'model'},
+  {page:'group-risk',zh:'建筑群风险计算',en:'Building-group risk',status:'partial'},
+  {page:'propagation',zh:'渗流分析与范围识别',en:'Percolation & extents',status:'partial'},
   {page:'results',zh:'成果核验与发布',en:'Review & publication',status:'partial'},
  ],
 

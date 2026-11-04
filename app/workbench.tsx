@@ -11,6 +11,7 @@ import './herisk.css';
 import RiskWorkspace from './risk-workspace';
 import {HeriskHeader,AboutHerisk} from './herisk-brand';
 import {ThemeProvider} from '../lib/theme';
+import RiskAtlas from './risk-atlas';
 import {WorkspaceBar,PlatformArchitecture,ModuleWorkbench} from './platform-workspace';
 import {platformModules,originalTools} from '../lib/platform-modules';
 import { api, isPages, assetBase, signInUrl, sourceDownloadUrl } from '../lib/client-data';
@@ -77,7 +78,8 @@ function WorkbenchContent(){
       <div className="breadcrumb">研究工作台<ChevronRight size={13}/><span>{page==='compute'?(locale==='zh'?'计算工作台':'Computation home'):([...platformModules.compute,...originalTools].find(m=>m.page===page)?.[locale]||nav.find(n=>n.id===page)?.label||'计算口径与说明')}</span></div>
       {page==='compute'&&<RiskWorkspace boot={boot} onNavigate={navigate} onOpenSite={(id,score)=>{selectSite(id);if(score)setScoreId(score);}}/>}
       {page==='architecture'&&<PlatformArchitecture onNavigate={navigate}/>}
-      {['group-risk','propagation','results'].includes(page)&&<ModuleWorkbench key={page} page={page} boot={boot} onNavigate={navigate} onOpenSite={(id,target)=>selectSite(id,(target||'assessment') as Page)}/>}
+      {['group-risk','propagation'].includes(page)&&<RiskAtlas key={page} page={page} onOpenSite={(id,target)=>selectSite(id,(target||'assessment') as Page)}/>}
+      {page==='results'&&<ModuleWorkbench key={page} page={page} boot={boot} onNavigate={navigate} onOpenSite={(id,target)=>selectSite(id,(target||'assessment') as Page)}/>}
 
       {page==='statistics'&&<>
         <div className="page-heading"><div><div className="eyebrow">HERITAGE OBSERVATORY</div><h1>{brand[locale]}</h1><p>连接文物档案、敏感性评价与来源证据，支持有据可查的保护与规划研究。</p></div><button className="primary" onClick={()=>navigate('catalog')}>浏览文物档案<ArrowUpRight size={17}/></button></div>
