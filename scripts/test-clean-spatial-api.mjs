@@ -1,0 +1,7 @@
+import assert from 'node:assert/strict';
+const base='http://127.0.0.1:5173';const get=async p=>{const r=await fetch(base+'/api/'+p);assert.equal(r.status,200);return r.json();};
+const boot=await get('bootstrap');const detail=await get('sites/G-1');const match=await get('map/match/G-1');assert.deepEqual(detail.spatial,match);assert.ok(match.building_id.startsWith('c'));assert.ok(match.revision>=1000);assert.equal(boot.sites.find(s=>s.id==='G-1').building_id,match.building_id);
+const send=async(input,auth=true)=>fetch(base+'/api/spatial-confirm',{method:'POST',headers:{'Content-Type':'application/json',Origin:base,...(auth?{Cookie:'__sites_local_auth=1'}:{})},body:JSON.stringify(input)});
+const input={site_id:'G-1',building_id:match.building_id,revision:match.revision,note:'仅本地QA：清理后数据版本、候选确认和乐观锁测试。'};
+assert.equal((await send(input,false)).status,403);assert.equal((await send({...input,building_id:'old-shp'})).status,400);assert.equal((await send(input)).status,200);assert.equal((await send(input)).status,409);
+const saved=await get('map/match/G-1');assert.equal(saved.status,'confirmed');assert.equal(saved.revision,match.revision+1);assert.equal(saved.original_lon,match.original_lon);assert.equal((await get('bootstrap')).sites.find(s=>s.id==='G-1').match_status,'confirmed');console.log('PASS: clean dataset baseline, API consistency, candidate validation, admin authorization and revision conflict. Local QA only.');

@@ -1,19 +1,22 @@
 import assert from 'node:assert/strict';
 import { PMTiles } from 'pmtiles';
+import fs from 'node:fs';
+const expected=JSON.parse(fs.readFileSync('data/clean-spatial.json','utf8'))['G-1'];
+const expectedBytes=fs.statSync('data/shanghai-buildings.pmtiles').size;
 const base=process.env.TEST_URL||'http://127.0.0.1:5173';
 const archive=base+'/api/map/archive';
 const head=await fetch(archive,{method:'HEAD'});
-assert.equal(head.status,200);assert.equal(Number(head.headers.get('Content-Length')),165234554);
+assert.equal(head.status,200);assert.equal(Number(head.headers.get('Content-Length')),expectedBytes);
 const range=await fetch(archive,{headers:{Range:'bytes=0-126'}});
-assert.equal(range.status,206);assert.equal(range.headers.get('Content-Range'),'bytes 0-126/165234554');
+assert.equal(range.status,206);assert.equal(range.headers.get('Content-Range'),`bytes 0-126/${expectedBytes}`);
 assert.equal(new TextDecoder().decode((await range.arrayBuffer()).slice(0,7)),'PMTiles');
-assert.equal((await fetch(archive,{headers:{Range:'bytes=165234554-'}})).status,416);
+assert.equal((await fetch(archive,{headers:{Range:`bytes=${expectedBytes}-`}})).status,416);
 const pm=new PMTiles(archive),meta=await pm.getMetadata(),header=await pm.getHeader();
-assert.equal(header.minZoom,14);assert.equal(header.maxZoom,16);
+assert.equal(header.minZoom,10);assert.equal(header.maxZoom,16);
 assert.ok(meta.vector_layers.some(l=>l.id==='buildings'));
 assert.ok((await pm.getZxy(16,54932,26800)).data.byteLength>0);
 const match=await (await fetch(base+'/api/map/match/G-1')).json();
-assert.equal(match.building_id,'723549');assert.ok(JSON.parse(match.geometry).coordinates.length);
+assert.equal(match.building_id,expected.building_id);assert.ok(JSON.parse(match.geometry).coordinates.length);
 assert.ok(JSON.parse(match.candidates).length>0);
 for(const route of ['map-upload/start','spatial-confirm'])assert.equal((await fetch(base+'/api/'+route,{method:'POST',headers:{'Content-Type':'application/json',Origin:base},body:'{}'})).status,403);
 if(base.startsWith('http://127.0.0.1:')){
