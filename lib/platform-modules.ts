@@ -13,9 +13,9 @@ export const originalTools=[
  {page:'indicators',zh:'指标体系',en:'Indicators'},
  {page:'evidence',zh:'证据检索',en:'Evidence search'},
  {page:'review',zh:'专家复核',en:'Expert review'},
- {page:'sources',zh:'上传 / Agent',en:'Upload / agent'},
  {page:'map',zh:'建筑地图',en:'Building map'},
  {page:'statistics',zh:'数据统计',en:'Statistics'},
  {page:'knowledge',zh:'知识库结构',en:'Knowledge base'},
  {page:'architecture',zh:'平台架构',en:'Architecture'},
+ {page:'method',zh:'计算口径与说明',en:'Methods & definitions'},
 ] as const;
