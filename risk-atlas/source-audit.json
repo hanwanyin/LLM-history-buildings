@@ -1,0 +1,42 @@
+{
+  "crs": "EPSG:32651",
+  "buildings": 1484693,
+  "heritage_points": 767,
+  "outside_source_records_excluded": 86133,
+  "edge_geometries_clipped": 140,
+  "matched_yulun_points": 745,
+  "missing_yulun_points": 22,
+  "risk_fields": [
+    "risk_bendi_raw",
+    "risk_kaifa_raw",
+    "risk_huodong_raw",
+    "risk_weihuapin_raw",
+    "risk_yulun_0_100"
+  ],
+  "boundary_geometry": "shared canonical geometry from risk_bendi.gpkg, clipped to Shanghai",
+  "building_yulun": "not defined: sentiment risk is only attached to heritage points",
+  "files": {
+    "建筑风险_四类共享几何.parquet": 149360671,
+    "文物点风险_含舆论反向值.parquet": 140457,
+    "上海市域边界.gpkg": 122880,
+    "数据说明.md": 3461,
+    "绘图栅格/开发建设_插值平滑_全域.tif": 5374505,
+    "绘图栅格/危化品_原始值_全域.tif": 5720539,
+    "绘图栅格/活动利用_原始值_全域.tif": 2259424,
+    "绘图栅格/开发建设_插值平滑_中心城区.tif": 22825565,
+    "绘图栅格/危化品_原始值_中心城区.tif": 14720799,
+    "绘图栅格/本底塑造_全域.tif": 4921566,
+    "绘图栅格/本底塑造_中心城区.tif": 12482656,
+    "绘图栅格/活动利用_原始值_中心城区.tif": 7814608
+  },
+  "post_export_validation": {
+    "id_unique": true,
+    "log1p_matches": true,
+    "idw_only_zero_buildings": true,
+    "yulun_inverse_matches": true,
+    "missing_yulun_remains_null": true,
+    "raster_crs_epsg": 32651,
+    "smooth_sample_null_count": 73,
+    "archive_crc_verified": true
+  }
+}
