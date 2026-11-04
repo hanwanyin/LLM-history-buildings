@@ -3,7 +3,7 @@ import {useEffect,useMemo,useRef,useState} from 'react';
 import {useLocale} from '../lib/i18n';
 import {useTheme} from '../lib/theme';
 import {assetUrl} from '../lib/client-data';
-import {connectedRiskRegions,regionGeoJSON,type RiskCell} from '../lib/risk-regions';
+import {connectedRiskRegions,regionGeoJSON,regionOutlines,type RiskCell} from '../lib/risk-regions';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './risk-atlas.css';
 type Row=Record<string,any>;
@@ -24,7 +24,7 @@ export default function RiskAtlas({page,onOpenSite}:{page:string;onOpenSite:(id:
  useEffect(()=>{if(!data||!el.current)return;let alive=true;let instance:any;let ro:ResizeObserver;
  import('maplibre-gl').then(lib=>{if(!alive||!el.current)return;lib.setWorkerUrl(assetUrl('maplibre/worker.mjs'));instance=new lib.Map({container:el.current,style:{version:8,sources:{boundary:{type:'geojson',data:data.boundary,attribution:'HERISK · 用户提供五类风险绘图数据'}},layers:[{id:'bg',type:'background',paint:{'background-color':theme==='dark'?'#162321':'#e8ede6'}},{id:'land',type:'fill',source:'boundary',paint:{'fill-color':theme==='dark'?'#21352e':'#f8f9f1'}},{id:'border',type:'line',source:'boundary',paint:{'line-color':'#78978a','line-width':1.2}}]},center:[121.45,31.1],zoom:8,minZoom:5,maxZoom:19,attributionControl:{compact:true}});map.current=instance;instance.addControl(new lib.NavigationControl(),'bottom-right');instance.addControl(new lib.ScaleControl({unit:'metric'}));instance.on('load',()=>{if(!alive)return;for(const s of ['cells','points','regions','picked'])instance.addSource(s,{type:'geojson',data:fc([])});
  instance.addLayer({id:'risk-cells',type:'fill',source:'cells',paint:{'fill-color':['get','color'],'fill-opacity':.76}});
- instance.addLayer({id:'risk-regions',type:'line',source:'regions',paint:{'line-color':'#a21b67','line-width':2}});
+ instance.addLayer({id:'risk-regions',type:'line',source:'regions',paint:{'line-color':'#a21b67','line-width':['interpolate',['linear'],['zoom'],8,.7,12,2]}});
  instance.addLayer({id:'picked',type:'line',source:'picked',paint:{'line-color':'#172cce','line-width':3}});
  instance.addLayer({id:'risk-points',type:'circle',source:'points',paint:{'circle-radius':['interpolate',['linear'],['zoom'],8,3,14,7],'circle-color':['get','color'],'circle-stroke-width':1,'circle-stroke-color':'#ffffff'}});
  instance.on('click','risk-points',(e:any)=>{const p=dataRef.current?.points.find((p:Row)=>p.id===e.features[0].properties.id);if(p){setSelected(p);setSelectedCell(null);instance.flyTo({center:[p.lng,p.lat],zoom:14});}});
@@ -34,7 +34,7 @@ export default function RiskAtlas({page,onOpenSite}:{page:string;onOpenSite:(id:
  useEffect(()=>{if(!ready||!data)return;const m=map.current;const colors=['#318484','#dcd28a','#bf464e'];function color(v:number|null){if(v==null)return '#89928e';const low=hazard==='weihuapin'?.25:0,ratio=Math.max(0,Math.min(1,hazard==='huodong'?Math.log1p(Math.max(0,v))/Math.log1p(h[4]):(v-low)/(h[4]-low)));const palette=[[49,132,132],[220,210,138],[191,70,78]],idx=ratio<.5?0:1,t=ratio<.5?ratio*2:(ratio-.5)*2;return `rgb(${palette[idx].map((a,j)=>Math.round(a*(1-t)+palette[idx+1][j]*t)).join(',')})`;}
  const allowed=analysis?new Set(regions.flat()):null;
  m.getSource('cells').setData(fc(field<0?[]:cells.flatMap((c,i)=>allowed&&!allowed.has(c)?[]:[{type:'Feature',properties:{index:i,color:color(c[metric][field])},geometry:{type:'Polygon',coordinates:[c.ring]}}])));
- m.getSource('regions').setData(geo);
+ m.getSource('regions').setData(regionOutlines(regions));
  m.getSource('points').setData(fc(points.map(p=>({type:'Feature',properties:{id:p.id,color:hazard==='yulun'?color(p[pointField]):'#245c52'},geometry:{type:'Point',coordinates:[p.lng,p.lat]}}))));
  m.setLayoutProperty('risk-cells','visibility',field>=0&&(analysis||mode==='grid')?'visible':'none');
  if(m.getLayer('risk-image'))m.removeLayer('risk-image');if(m.getSource('risk-image'))m.removeSource('risk-image');
