@@ -30,7 +30,7 @@ export function createMapStyle(archiveUrl:string,theme:'light'|'dark'='light'):S
     glyphs:'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
     sources:{
       openmaptiles:{type:'vector',url:'https://tiles.openfreemap.org/planet',attribution:'<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · © <a href="https://openmaptiles.org" target="_blank" rel="noopener">OpenMapTiles</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'},
-      buildings:{type:'vector',url:`pmtiles://${archiveUrl}`,attribution:'建筑轮廓：用户提供的上海建筑 SHP'},
+      buildings:{type:'vector',url:`pmtiles://${archiveUrl}`,attribution:'建筑轮廓：用户提供的清理后上海建筑 SHP'},
     },
     layers:[...geometry,
       {id:'building-fill',type:'fill',source:'buildings','source-layer':'buildings',minzoom:14,paint:{'fill-color':theme==='dark'?'#70827a':'#9eaead','fill-opacity':.55}},

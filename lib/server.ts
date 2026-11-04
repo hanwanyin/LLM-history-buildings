@@ -1,3 +1,4 @@
+import {effectiveSpatial} from './clean-spatial';
 import { env } from 'cloudflare:workers';
 import { summarize, type ScoreRecord } from './assessment';
 export function database() { if (!env.DB) throw new Error('DB binding unavailable'); return env.DB; }
@@ -52,7 +53,7 @@ export async function siteDetail(id: string) {
     db.prepare("SELECT id,site_id,title,kind,filename,source_url,publisher,published_at,locator,content,extraction_note,created_at,reviewed_at,review_note FROM knowledge_documents WHERE site_id=? AND status='approved' ORDER BY reviewed_at DESC").bind(id)
   ]);
   const {raw,...profile}=site;
-  return {site:profile,scores:result[0].results,dimensions:result[1].results,runs:result[2].results,issues:result[3].results,reviews:result[4].results,spatial:result[5].results[0]||null,supplements:result[6].results,summary:summarize(result[0].results as ScoreRecord[])};
+  return {site:profile,scores:result[0].results,dimensions:result[1].results,runs:result[2].results,issues:result[3].results,reviews:result[4].results,spatial:effectiveSpatial(id,result[5].results[0]||null),supplements:result[6].results,summary:summarize(result[0].results as ScoreRecord[])};
 }
 export async function handleError(error: unknown) {
   if(error instanceof HttpError)return json({error:error.message},error.status);

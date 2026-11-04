@@ -11,11 +11,11 @@ assert.equal(connectedRiskRegions(cells,0,1,2,false).length,0);
 assert.equal(connectedRiskRegions(cells,0,0).flat().length,3); // real zero included, missing excluded
 assert.equal(regionGeoJSON(connectedRiskRegions(cells,0,1,1,true)).features[0].properties.grid_area_km2,.5);
 const dir='public/risk-atlas/';const manifest=JSON.parse(fs.readFileSync(dir+'manifest.json'));const all=JSON.parse(fs.readFileSync(dir+'cells.json'));const points=JSON.parse(fs.readFileSync(dir+'points.json'));
-assert.equal(all.reduce((n,c)=>n+c.n,0),1484693);assert.equal(all.length,manifest.cell_count);assert.equal(points.length,767);assert.equal(new Set(points.map(p=>p.id)).size,767);assert.equal(points.filter(p=>p.risk_yulun_0_100===null).length,22);
+assert.equal(all.reduce((n,c)=>n+c.n,0),1570932);assert.equal(all.length,manifest.cell_count);assert.equal(points.length,767);assert.equal(new Set(points.map(p=>p.id)).size,767);assert.equal(points.filter(p=>p.risk_yulun_0_100===null).length,22);
 for(const p of points)if(p.risk_yulun_0_100!==null)assert.ok(Math.abs(p.risk_yulun_0_100-(100-p.sentiment_score_0_100))<1e-8);
-assert.equal(manifest.statistics.risk_kaifa_smooth_sample.missing,73);
+assert.ok(manifest.statistics.risk_kaifa_smooth_sample.missing>=manifest.clean_geometry_audit.risk_unmatched_buildings);
 for(const r of Object.values(manifest.rasters)){assert.ok(fs.existsSync(dir+r.file));assert.equal(r.source_crs,'EPSG:32651');assert.ok(r.coordinates.every(([x,y])=>x>120&&x<124&&y>29&&y<33));}
 const real=connectedRiskRegions(all,0,.7,3);assert.ok(real.length>0);assert.ok(real.flat().every(c=>c.mean[0]>=.7));
-console.log(JSON.stringify({passed:true,cells:all.length,buildings:1484693,points:points.length,regions:real.length}));
+console.log(JSON.stringify({passed:true,cells:all.length,buildings:1570932,points:points.length,regions:real.length}));
 
 assert.equal(regionOutlines([[c(0,0,1),c(1,0,1)]]).features[0].geometry.coordinates.length,6);

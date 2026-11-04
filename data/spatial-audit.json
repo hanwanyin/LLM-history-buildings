@@ -1,16 +1,24 @@
 {
-  "source": "上海建筑.zip / shanghai.shp",
-  "source_crs": "EPSG:4326",
-  "distance_crs": "EPSG:32651",
-  "building_count": 1570826,
-  "stats": {
-    "candidate": 566,
-    "inside": 136,
-    "unmatched": 65,
-    "overlapping_footprints": 1
+  "source": "全部建筑地块_含文物属性_SHP.zip",
+  "source_crs": "EPSG:32651",
+  "web_crs": "EPSG:3857",
+  "building_count": 1570932,
+  "risk_matched_buildings": 1458047,
+  "risk_unmatched_buildings": 112885,
+  "risk_source_count": 1484693,
+  "risk_source_matched": 1458047,
+  "risk_join": "source row index checked by centroid within 0.05 m and area difference <0.5%; moved rows require >99% overlap; changed/unmatched shapes retain null risk",
+  "source_attribute_polygons": 2255,
+  "named_heritage_sites": 443,
+  "unresolved_attribute_polygons": 2,
+  "site_matches": {
+    "source": 443,
+    "inside": 43,
+    "unmatched": 281
   },
-  "threshold_m": 120,
-  "created_at": "2026-11-01T04:36:01.794693+00:00",
-  "method": "保留CSV的wgs_lon/wgs_lat为原始点。点在面内记录inside；否则120米内最近建筑作为待核查候选，显示锚点为面内点。仅几何关联，未核验建筑名称身份；遗址、墓葬、桥梁等不一定有建筑面。shanghai51N与shanghai是同一数据的不同投影，未重复导入。",
-  "zip_sha256": "576de337e6d3d697c12acd79b24684c13202904ce219a37304cc8813dad3422e"
+  "outside_check_rows": 524,
+  "outside_check_noted": 27,
+  "source_sha256": "065177626597ab98d20af6a6a8d7217747ea3bed3a6cfc3b86b85c82ba908465",
+  "risk_sha256": "bb59156d838853645b009ee41597378f09969b630ff919edcf628fa6fa362d59",
+  "check_sha256": "c8b1b3ee290db95a9d9870bcc4be469b19b77cbad265dcc51bd932a7ab0ecc9a"
 }

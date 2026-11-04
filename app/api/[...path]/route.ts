@@ -1,3 +1,4 @@
+import {effectiveSpatial,cleanBootstrapSite} from '../../../lib/clean-spatial';
 import { knowledgeGet, knowledgePost } from '../../../lib/knowledge-server';
 import { env } from 'cloudflare:workers';
 import { database, json, identity, authorize, body, textValue, siteDetail, scoreQuery, HttpError, handleError } from '../../../lib/server';
@@ -9,16 +10,16 @@ export async function GET(req:Request){try{
   if(kind==='bootstrap'){
     const results=await db.batch([
       db.prepare(`SELECT (SELECT COUNT(*) FROM heritage_sites) AS sites,(SELECT COUNT(*) FROM scores) AS scores,(SELECT COUNT(*) FROM indicators) AS indicators,(SELECT COUNT(*) FROM sources) AS sources,(SELECT COUNT(*) FROM scores WHERE score IS NULL) AS missing,(SELECT COUNT(*) FROM current_reviews) AS reviewed,(SELECT COUNT(*) FROM data_issues) AS issues,(SELECT COUNT(DISTINCT site_id) FROM scores) AS detailed_sites,(SELECT COUNT(*) FROM assessment_runs) AS runs`),
-      db.prepare(`SELECT h.id,h.name,h.district,h.address,h.level,h.type,h.longitude,h.latitude,m.longitude AS map_lon,m.latitude AS map_lat,m.status AS match_status,m.distance_m,m.building_id,COUNT(s.id) AS detail_count,COUNT(CASE WHEN s.score IS NULL AND s.id IS NOT NULL THEN 1 END) AS missing_count FROM heritage_sites h LEFT JOIN scores s ON s.site_id=h.id LEFT JOIN spatial_matches m ON m.site_id=h.id GROUP BY h.id ORDER BY h.id`),
+      db.prepare(`SELECT h.id,h.name,h.district,h.address,h.level,h.type,h.longitude,h.latitude,m.longitude AS map_lon,m.latitude AS map_lat,m.status AS match_status,m.distance_m,m.building_id,m.revision AS match_revision,COUNT(s.id) AS detail_count,COUNT(CASE WHEN s.score IS NULL AND s.id IS NOT NULL THEN 1 END) AS missing_count FROM heritage_sites h LEFT JOIN scores s ON s.site_id=h.id LEFT JOIN spatial_matches m ON m.site_id=h.id GROUP BY h.id ORDER BY h.id`),
       db.prepare('SELECT * FROM indicators ORDER BY position'),
       db.prepare('SELECT district,COUNT(*) AS count FROM heritage_sites GROUP BY district ORDER BY count DESC'),
       db.prepare(`SELECT i.dimension,COUNT(*) AS total,COUNT(s.score) AS valid,AVG(s.score) AS average,SUM(CASE WHEN s.confidence='低' THEN 1 ELSE 0 END) AS low FROM scores s JOIN indicators i ON i.id=s.indicator_id GROUP BY i.dimension`),
       db.prepare('SELECT site_id,dimension,score FROM dimension_scores ORDER BY site_id,dimension')
     ]);
-    const user=identity(req);return json({stats:results[0].results[0],sites:results[1].results,indicators:results[2].results,districts:results[3].results,dimensions:results[4].results,mapScores:results[5].results,user:{signedIn:user.signedIn,admin:user.admin,email:user.signedIn?user.email:null},storage:'Cloudflare D1'});
+    const user=identity(req);return json({stats:results[0].results[0],sites:results[1].results.map(row=>cleanBootstrapSite(row as Record<string,any>)),indicators:results[2].results,districts:results[3].results,dimensions:results[4].results,mapScores:results[5].results,user:{signedIn:user.signedIn,admin:user.admin,email:user.signedIn?user.email:null},storage:'Cloudflare D1'});
   }
   if(kind==='map'&&id==='archive')return await mapArchive(req);
-  if(kind==='map'&&id==='match'&&action){const r=await db.prepare('SELECT * FROM spatial_matches WHERE site_id=?').bind(action).first();if(!r)throw new HttpError(404,'该文物尚未完成建筑匹配。');return json(r);}
+  if(kind==='map'&&id==='match'&&action){const r=await db.prepare('SELECT * FROM spatial_matches WHERE site_id=?').bind(action).first();if(!r)throw new HttpError(404,'该文物尚未完成建筑匹配。');return json(effectiveSpatial(action,r));}
   if(kind==='sites'&&id)return json(await siteDetail(id));
   if(kind==='sources'&&id&&action==='download'){
     const source=await db.prepare('SELECT * FROM sources WHERE id=?').bind(id).first<{filename:string;object_key:string}>();
@@ -74,9 +75,9 @@ export async function POST(req:Request){try{
   if(kind==='spatial-confirm'){
     const siteId=textValue(input.site_id,100,true),buildingId=textValue(input.building_id,100,true),note=textValue(input.note,2000,true);
     if(!Number.isInteger(input.revision)||input.revision<1)throw new HttpError(400,'版本信息无效。');
-    const old=await db.prepare('SELECT candidates FROM spatial_matches WHERE site_id=?').bind(siteId).first<{candidates:string}>();if(!old)throw new HttpError(404,'空间匹配记录不存在。');
-    const c=JSON.parse(old.candidates).find((x:{building_id:string})=>x.building_id===buildingId);if(!c)throw new HttpError(400,'请选择已登记的候选建筑。');
-    const r=await db.batch([db.prepare("UPDATE spatial_matches SET building_id=?,status='confirmed',longitude=?,latitude=?,distance_m=?,height=?,geometry=?,revision=revision+1,updated_at=? WHERE site_id=? AND revision=? RETURNING site_id").bind(buildingId,c.longitude,c.latitude,c.distance_m,c.height,JSON.stringify(c.geometry),now,siteId,input.revision),db.prepare('INSERT INTO audit_logs (id,action,site_id,actor,details,created_at) SELECT ?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM spatial_matches WHERE site_id=? AND revision=? AND updated_at=?)').bind(crypto.randomUUID(),'确认建筑关联',siteId,actor,JSON.stringify({building_id:buildingId,note}),now,siteId,input.revision+1,now)]);
+    const old=await db.prepare('SELECT * FROM spatial_matches WHERE site_id=?').bind(siteId).first<Record<string,any>>();if(!old)throw new HttpError(404,'空间匹配记录不存在。');
+    const current=effectiveSpatial(siteId,old)!;if(input.revision!==current.revision)throw new HttpError(409,'建筑关联已有更新，请刷新后重试。');const c=JSON.parse(current.candidates).find((x:{building_id:string})=>x.building_id===buildingId);if(!c)throw new HttpError(400,'请选择已登记的候选建筑。');
+    const r=await db.batch([db.prepare("UPDATE spatial_matches SET building_id=?,status='confirmed',longitude=?,latitude=?,distance_m=?,height=?,geometry=?,candidates=?,revision=?,updated_at=? WHERE site_id=? AND revision=? RETURNING site_id").bind(buildingId,c.longitude,c.latitude,c.distance_m,c.height,JSON.stringify(c.geometry),current.candidates,current.revision+1,now,siteId,old.revision),db.prepare('INSERT INTO audit_logs (id,action,site_id,actor,details,created_at) SELECT ?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM spatial_matches WHERE site_id=? AND revision=? AND updated_at=?)').bind(crypto.randomUUID(),'确认建筑关联',siteId,actor,JSON.stringify({building_id:buildingId,note}),now,siteId,input.revision+1,now)]);
     if(!r[0].results.length)throw new HttpError(409,'建筑关联已有更新，请刷新后重试。');return json({saved:true});
   }
   if(kind==='reviews'){
