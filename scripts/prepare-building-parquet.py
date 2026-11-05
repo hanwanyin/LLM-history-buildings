@@ -97,10 +97,14 @@ hname = frame['heritage_name'].fillna('').astype(str).to_numpy(dtype=object).ast
 risk = {key: frame[col].to_numpy(dtype=float) for key, col in HAZARDS}
 
 tiles_dir = OUT / 'tiles' / str(TILE_Z)
+tiles_only_overviews = '--overviews-only' in sys.argv
 tiles_dir.mkdir(parents=True, exist_ok=True)
 manifest_tiles = []
 total = 0
 for index, ((gx, gy), rows) in enumerate(sorted(tiles.items())):
+    if tiles_only_overviews:
+        manifest_tiles.append((gx, gy, len(rows), 0))
+        continue
     rows = np.array(rows, dtype=np.int64)
     table = pa.table({
         'i': pa.array(b_id[rows], pa.int32()),
@@ -167,7 +171,10 @@ for key, _ in HAZARDS:
     ratio = np.clip(np.where(np.isfinite(ratio), ratio, 0), 0, 1)
     color = np.stack([np.interp(ratio, [0, 0.5, 1], PALETTE[:, k]) for k in range(3)], axis=-1)
     alpha = np.where(np.isfinite(smooth) & (weight > 0.12), 225, 0)
-    Image.fromarray(np.dstack([color, alpha]).astype('uint8')).save(OUT / f'overview-{key}.png', optimize=True)
+    # Row 0 of the grid is the southern edge and row 0 of an image is the top
+    # row, so the array must be flipped before it is georeferenced by its
+    # north-west corner. Without this the whole surface appears upside down.
+    Image.fromarray(np.dstack([color, alpha]).astype('uint8')[::-1]).save(OUT / f'overview-{key}.png', optimize=True)
     merc = Transformer.from_crs(3857, 4326, always_xy=True)
     corners = [list(merc.transform(minx * cell, maxy * cell)), list(merc.transform(maxx * cell, maxy * cell)),
                list(merc.transform(maxx * cell, miny * cell)), list(merc.transform(minx * cell, miny * cell))]
