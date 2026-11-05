@@ -38,13 +38,13 @@ export default function RiskAtlas({page,onOpenSite}:{page:string;onOpenSite:(id:
   // The same OpenFreeMap basemap as the map workspace: roads, water and place
   // names stay visible under the risk layers, with the study boundary on top.
   const base=createMapStyle(theme);
-  const atlasStyle={...base,sources:{...base.sources,boundary:{type:'geojson',data:data.boundary,attribution:'HERISK · 用户提供五类风险绘图数据'}},layers:[
+  const atlasStyle: import('maplibre-gl').StyleSpecification={...base,sources:{...base.sources,boundary:{type:'geojson',data:data.boundary,attribution:'HERISK · 用户提供五类风险绘图数据'}},layers:[
     base.layers[0],
     {id:'atlas-land',type:'fill',source:'boundary',paint:{'fill-color':theme==='dark'?'#22352e':'#f6f8ef','fill-opacity':theme==='dark'?.18:.32}},
     ...base.layers.slice(1),
     {id:'atlas-border',type:'line',source:'boundary',paint:{'line-color':theme==='dark'?'#86a899':'#78978a','line-width':1.2}}
   ]};
-  instance=new lib.Map({container:el.current,style:atlasStyle,center:[121.47,31.23],zoom:8,minZoom:5,maxZoom:19,attributionControl:{compact:true}});map.current=instance;instance.addControl(new lib.NavigationControl(),'bottom-right');instance.addControl(new lib.ScaleControl({unit:'metric'}));instance.on('load',()=>{if(!alive)return;for(const s of ['cells','points','regions','picked'])instance.addSource(s,{type:'geojson',data:fc([])});
+  instance=new lib.Map({container:el.current,style:atlasStyle,center:[121.47,31.23],zoom:8,minZoom:5,maxZoom:19,attributionControl:{compact:true}});map.current=instance;instance.addControl(new lib.NavigationControl(),'bottom-right');instance.addControl(new lib.ScaleControl({unit:'metric'}));instance.on('style.load',()=>{if(!alive)return;for(const s of ['cells','points','regions','picked'])instance.addSource(s,{type:'geojson',data:fc([])});
  const firstOverview=data.parquet?.overviews?.[hazard];if(firstOverview){overviewHazard.current=hazard;instance.addSource('overview',{type:'image',url:assetUrl('buildings/'+firstOverview.file),coordinates:firstOverview.coordinates});instance.addLayer({id:'overview',type:'raster',source:'overview',maxzoom:13,paint:{'raster-opacity':['interpolate',['linear'],['zoom'],11.4,.84,12.6,0],'raster-resampling':'linear','raster-fade-duration':0}});}
  instance.on('zoomend',()=>setZoom(instance.getZoom()));setZoom(instance.getZoom());
  instance.addSource('risk-buildings',{type:'geojson',data:fc([]),attribution:'清理后SHP · GeoParquet风险'});instance.addLayer({id:'risk-buildings',type:'fill',source:'risk-buildings',minzoom:12,paint:{'fill-color':'#89928e','fill-opacity':['interpolate',['linear'],['zoom'],12,.05,12.6,.55,13,.92]}});instance.addLayer({id:'risk-building-outline',type:'line',source:'risk-buildings',minzoom:13.2,paint:{'line-color':'#62796d','line-width':.5}});

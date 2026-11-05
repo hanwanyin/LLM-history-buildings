@@ -31,7 +31,7 @@ export default function HeritageMap({sites,onSelect,selectedId,admin=false,onUpd
       mapRef.current=map;map.addControl(new lib.NavigationControl({showCompass:true}),explorer?'bottom-right':'top-right');map.addControl(new lib.ScaleControl({unit:'metric'}),'bottom-left');
       map.on('error',e=>{if(!alive)return;if((e as unknown as {sourceId?:string}).sourceId==='openmaptiles')setMapError('开源底图暂未加载，可继续查看建筑和文物图层。');else if((e as unknown as {sourceId?:string}).sourceId==='buildings')setMapError('建筑图层正在加载或暂不可用，请稍后重试。');});
       map.on('zoomend',()=>{if(alive)setZoom(map.getZoom());});
-      map.on('load',()=>{if(!alive)return;
+      map.on('style.load',()=>{if(!alive)return;
         const empty:any={type:'FeatureCollection',features:[]};
         for(const id of ['heritage','originals','selected-building','selected-line'])map.addSource(id,{type:'geojson',data:empty});
         map.addSource('buildings',{type:'geojson',data:empty});

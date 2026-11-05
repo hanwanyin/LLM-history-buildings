@@ -118,3 +118,23 @@ body{background:var(--bg)}button,.button,input,select,textarea{background:var(--
 [data-theme=dark] .dimension-card{background:#20302a;border-color:#33443b}
 [data-theme=dark] .dimension-card>span{color:#cfdac9}
 [data-theme=dark] .dimension-card>small{color:#a9b6a8}
+
+/* Platform modules and evaluation workflow (home overview strip). */
+.workflow-overview{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:18px 20px 20px;margin-bottom:20px;box-shadow:var(--shadow)}
+.workflow-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
+.workflow-head .eyebrow{margin-bottom:6px}
+.workflow-head h2{font-size:16px}
+.workflow-head p{font-size:12px;color:var(--muted);margin-top:6px;max-width:860px;line-height:1.8}
+.workflow-steps{list-style:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:0;padding:0}
+.workflow-steps li{display:flex}
+.workflow-steps button{display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left;width:100%;background:var(--soft);border:1px solid transparent;border-radius:7px;padding:12px 13px;position:relative;white-space:normal;font-weight:400}
+.workflow-steps button:hover{background:var(--panel);border-color:var(--line)}
+.workflow-steps li.active button{border-color:var(--brand);background:var(--panel)}
+.workflow-num{font-size:10px;letter-spacing:.14em;color:var(--gold);font-weight:600}
+.workflow-steps strong{font-size:13px;font-weight:600}
+.workflow-steps small{font-size:11px;color:var(--muted);line-height:1.7}
+.workflow-steps em{font-size:10px;color:var(--brand);font-style:normal;margin-top:2px}
+.workflow-steps svg{position:absolute;right:10px;top:11px;color:var(--muted)}
+[data-theme=dark] .workflow-steps em{color:var(--gold)}
+@media(max-width:1100px){.workflow-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.workflow-steps{grid-template-columns:1fr}.workflow-head{flex-direction:column}}

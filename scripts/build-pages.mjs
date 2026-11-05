@@ -23,7 +23,7 @@ for (const [from, to] of [
   ['public/favicon.svg', 'favicon.svg'],
 ]) await fs.copyFile(from, 'work/pages-public/' + to);
 
-for (const directory of ['clean-buildings', 'risk-atlas', 'buildings']) {
+for (const directory of ['clean-buildings', 'risk-atlas', 'buildings', 'research']) {
   const target = path.join('work/pages-public', directory);
   await fs.rm(target, { recursive: true, force: true });
   await fs.cp(path.join('public', directory), target, { recursive: true, filter: temporary });

@@ -1,0 +1,1521 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>不可移动文物 RAG-LLM 脆弱性评价工作台</title>
+  <style>
+    :root {
+      --ink: #17202a;
+      --muted: #657181;
+      --line: #d9dee7;
+      --panel: #ffffff;
+      --soft: #f5f7fa;
+      --brand: #0f6b63;
+      --brand-2: #1e88a8;
+      --warn: #b46a00;
+      --danger: #aa3f45;
+      --ok: #22784d;
+      --violet: #7357a5;
+      --shadow: 0 10px 30px rgba(15, 25, 40, .08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+      background: #eef2f6;
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+    }
+
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 248px minmax(680px, 1fr) 380px;
+      grid-template-rows: 64px 1fr;
+    }
+
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 0 22px;
+      background: #fbfcfd;
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .mark {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: white;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .top-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    aside {
+      border-right: 1px solid var(--line);
+      background: #fbfcfd;
+      padding: 18px 14px;
+      overflow: auto;
+    }
+
+    .nav-button {
+      width: 100%;
+      min-height: 42px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: #304050;
+      text-align: left;
+      padding: 9px 12px;
+      margin: 2px 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-button:hover { background: #edf3f6; }
+    .nav-button.active {
+      background: #dfeeed;
+      color: #063f39;
+      font-weight: 700;
+    }
+
+    .nav-icon {
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      color: var(--brand);
+    }
+
+    main {
+      padding: 18px 20px 28px;
+      overflow: auto;
+    }
+
+    .right-panel {
+      border-left: 1px solid var(--line);
+      background: #f9fbfc;
+      padding: 18px;
+      overflow: auto;
+    }
+
+    .page {
+      display: none;
+      animation: fade .16s ease-out;
+    }
+
+    .page.active { display: block; }
+
+    @keyframes fade {
+      from { opacity: .75; transform: translateY(2px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .section-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    h2 {
+      margin: 0 0 5px;
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 12px;
+      font-size: 15px;
+    }
+
+    .hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid.cols-2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .flat {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .metric {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .metric strong {
+      font-size: 26px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .btn {
+      min-height: 36px;
+      padding: 0 13px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #24313d;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn:hover { border-color: #94a6b8; }
+    .btn.primary {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+    }
+    .btn.secondary {
+      background: #e9f4f6;
+      color: #075166;
+      border-color: #b9dbe1;
+    }
+    .btn.warn {
+      color: #6f3e00;
+      background: #fff6e8;
+      border-color: #e6c58d;
+    }
+
+    select, input[type="text"], input[type="number"], textarea {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      min-height: 36px;
+      padding: 7px 10px;
+      outline: none;
+      width: 100%;
+    }
+
+    textarea {
+      min-height: 92px;
+      resize: vertical;
+      line-height: 1.55;
+    }
+
+    label {
+      display: block;
+      color: #394958;
+      font-size: 12px;
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 10px 11px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    th {
+      background: #f1f5f8;
+      color: #435365;
+      font-weight: 700;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+    tr.selectable { cursor: pointer; }
+    tr.selectable:hover td { background: #f6fafb; }
+    tr.selected td { background: #e6f3f2; }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid var(--line);
+      background: #f8fafc;
+      color: #4b5c6e;
+      white-space: nowrap;
+    }
+
+    .tag.rule { background: #eaf4ee; color: var(--ok); border-color: #b9d8c7; }
+    .tag.rag { background: #eef0fa; color: var(--violet); border-color: #d0c9ea; }
+    .tag.low { background: #fff1ef; color: var(--danger); border-color: #efc3bd; }
+    .tag.mid { background: #fff7e9; color: var(--warn); border-color: #e9cf9e; }
+    .tag.high { background: #e9f5ee; color: var(--ok); border-color: #bddcc9; }
+
+    .score {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: #fff;
+      font-weight: 700;
+      background: var(--brand-2);
+    }
+
+    .score.s1 { background: #637381; }
+    .score.s2 { background: #4d8ca7; }
+    .score.s3 { background: #a18424; }
+    .score.s4 { background: #c46135; }
+    .score.s5 { background: #a53844; }
+
+    .indicator-list {
+      display: grid;
+      gap: 8px;
+      max-height: 540px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .indicator-row {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .indicator-row:hover { border-color: #9eb1c2; }
+    .indicator-row.active {
+      border-color: var(--brand);
+      background: #edf8f7;
+    }
+
+    .indicator-row strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .indicator-row small {
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .evidence {
+      display: grid;
+      gap: 10px;
+    }
+
+    .evidence-item {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .evidence-item.active {
+      border-color: var(--brand-2);
+      box-shadow: inset 3px 0 0 var(--brand-2);
+    }
+
+    .evidence-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .quote {
+      color: #283744;
+      line-height: 1.65;
+      margin: 0;
+      font-size: 13px;
+    }
+
+    .log {
+      background: #101820;
+      color: #e6edf3;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      min-height: 160px;
+      max-height: 260px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 14px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      margin: 10px 0 16px;
+    }
+
+    .step {
+      min-height: 76px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .step.done { border-color: #add1bd; background: #f0f8f3; }
+    .step.active { border-color: #9bcfd9; background: #eef9fb; }
+    .step strong { display: block; font-size: 13px; margin-bottom: 6px; }
+    .step span { color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+    .progress {
+      height: 8px;
+      border-radius: 999px;
+      background: #dbe3ea;
+      overflow: hidden;
+    }
+
+    .progress > i {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--brand), var(--brand-2));
+      transition: width .35s ease;
+    }
+
+    .empty {
+      border: 1px dashed #b8c5d1;
+      border-radius: 8px;
+      background: #fff;
+      padding: 22px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr);
+      gap: 8px 10px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .kv b { color: #405161; }
+
+    .source-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border-radius: 8px;
+      background: #f1f5f8;
+      border: 1px solid var(--line);
+      padding: 6px 8px;
+      font-size: 12px;
+      color: #405161;
+    }
+
+    .upload-zone {
+      border: 1px dashed #9eb1c2;
+      background: #f8fbfc;
+      border-radius: 8px;
+      padding: 14px;
+      min-height: 156px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .file-input {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 8px;
+      padding: 10px;
+      width: 100%;
+    }
+
+    .queue-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 110px 90px;
+      gap: 8px;
+      align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+
+    .queue-item:last-child { border-bottom: 0; }
+
+    .file-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 700;
+    }
+
+    .drawer-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .drawer-title h3 { margin: 0; }
+
+    .reason-box {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      line-height: 1.65;
+      font-size: 13px;
+    }
+
+    .review-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 90px 90px 90px;
+      gap: 8px;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      padding: 10px 0;
+    }
+
+    .review-row:first-child {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .mobile-note { display: none; }
+
+    @media (max-width: 1180px) {
+      .shell {
+        grid-template-columns: 220px minmax(0, 1fr);
+      }
+      .right-panel {
+        grid-column: 2;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+      }
+      .grid.cols-3, .grid.cols-2, .split {
+        grid-template-columns: 1fr;
+      }
+      .steps {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .shell {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr auto;
+      }
+      header, aside, main, .right-panel {
+        grid-column: 1;
+      }
+      header {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 14px;
+      }
+      .top-actions { margin-left: 0; flex-wrap: wrap; }
+      aside {
+        display: flex;
+        overflow-x: auto;
+        gap: 4px;
+        padding: 10px;
+      }
+      .nav-button {
+        width: max-content;
+        min-width: 118px;
+      }
+      .mobile-note { display: block; }
+      table { min-width: 680px; }
+      .table-wrap { overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="mark">R</div>
+      <div>
+        <h1>不可移动文物 RAG-LLM 脆弱性评价工作台</h1>
+        <div class="subtitle">规则匹配 · 证据检索 · LLM 约束评分 · 专家复核</div>
+      </div>
+      <div class="top-actions">
+        <span class="pill">原型模式</span>
+        <span class="pill">30 个三级指标</span>
+        <button class="btn secondary" id="runFullBtn">运行一次完整评价</button>
+        <button class="btn" id="exportBtn">导出 JSON</button>
+      </div>
+    </header>
+
+    <aside>
+      <button class="nav-button active" data-page="overview"><span class="nav-icon">◎</span>总览</button>
+      <button class="nav-button" data-page="knowledge"><span class="nav-icon">▤</span>知识库</button>
+      <button class="nav-button" data-page="indicators"><span class="nav-icon">☷</span>指标体系</button>
+      <button class="nav-button" data-page="rules"><span class="nav-icon">⚙</span>规则配置</button>
+      <button class="nav-button" data-page="rag"><span class="nav-icon">⌕</span>RAG 调试台</button>
+      <button class="nav-button" data-page="assessment"><span class="nav-icon">▦</span>单体评价</button>
+      <button class="nav-button" data-page="review"><span class="nav-icon">✓</span>专家复核</button>
+    </aside>
+
+    <main>
+      <section class="page active" id="page-overview">
+        <div class="section-head">
+          <div>
+            <h2>评价流程总览</h2>
+            <p class="hint">这个页面演示从对象信息进入，到规则评分、RAG 证据检索、LLM 推理评分、专家修正和报告导出的闭环。</p>
+          </div>
+          <button class="btn primary" id="demoBtn">开始演示流程</button>
+        </div>
+
+        <div class="steps">
+          <div class="step active" data-step="0"><strong>1. 对象入库</strong><span>录入文物名称、等级、年代、材料、结构、开放状态。</span></div>
+          <div class="step" data-step="1"><strong>2. 指标分派</strong><span>强规则指标直接映射，认知指标进入 RAG。</span></div>
+          <div class="step" data-step="2"><strong>3. 证据检索</strong><span>从文物志、地方志、名录和案例中召回片段。</span></div>
+          <div class="step" data-step="3"><strong>4. 约束评分</strong><span>LLM 只基于证据和评分锚点输出分值。</span></div>
+          <div class="step" data-step="4"><strong>5. 专家复核</strong><span>修正低置信度、高权重或冲突指标。</span></div>
+        </div>
+        <div class="progress"><i id="flowProgress"></i></div>
+
+        <div class="grid cols-3" style="margin-top:16px">
+          <div class="card metric"><div><strong id="metricScore">4.13</strong><span>综合脆弱性均值</span></div><span class="tag high">较高</span></div>
+          <div class="card metric"><div><strong>7</strong><span>规则匹配型指标</span></div><span class="tag rule">可复核</span></div>
+          <div class="card metric"><div><strong>23</strong><span>RAG 推理型指标</span></div><span class="tag rag">证据约束</span></div>
+        </div>
+
+        <div class="grid cols-2" style="margin-top:14px">
+          <div class="card">
+            <h3>当前评价对象</h3>
+            <div class="kv" id="siteProfile"></div>
+          </div>
+          <div class="card">
+            <h3>运行日志</h3>
+            <div class="log" id="runLog">等待运行。点击“开始演示流程”或左侧进入 RAG 调试台。</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-knowledge">
+        <div class="section-head">
+          <div>
+            <h2>知识库管理</h2>
+            <p class="hint">这里管理法律法规、行业标准、指南 PDF、学术文献、文物志、地方志和文保名录。上传后进入解析、切分、标注和向量化队列。</p>
+          </div>
+          <button class="btn primary" id="mockIngestBtn">模拟入库并向量化</button>
+        </div>
+
+        <div class="grid cols-2" style="margin-bottom:14px">
+          <div class="card">
+            <h3>上传资料入口</h3>
+            <div class="upload-zone" id="uploadZone">
+              <div class="grid cols-2">
+                <div>
+                  <label>资料类型</label>
+                  <select id="uploadKind">
+                    <option>法律法规</option>
+                    <option>行业标准/技术指南</option>
+                    <option>学术文献</option>
+                    <option>典型案例</option>
+                    <option>文物志</option>
+                    <option>地方志</option>
+                    <option>文保名录</option>
+                    <option>现场调查资料</option>
+                  </select>
+                </div>
+                <div>
+                  <label>地区/适用范围</label>
+                  <input id="uploadRegion" type="text" value="上海" placeholder="如：上海、浦东、全国">
+                </div>
+              </div>
+              <div class="grid cols-2">
+                <div>
+                  <label>证据用途</label>
+                  <select id="uploadPurpose">
+                    <option>评价依据与评分锚点</option>
+                    <option>文物对象事实证据</option>
+                    <option>典型风险案例</option>
+                    <option>专家修正规则</option>
+                  </select>
+                </div>
+                <div>
+                  <label>可信度等级</label>
+                  <select id="uploadTrust">
+                    <option>权威来源</option>
+                    <option>正式出版物</option>
+                    <option>学术来源</option>
+                    <option>项目资料</option>
+                    <option>待核验</option>
+                  </select>
+                </div>
+              </div>
+              <input class="file-input" id="fileInput" type="file" multiple accept=".pdf,.doc,.docx,.txt,.md,.csv,.xlsx">
+              <div class="toolbar" style="margin-bottom:0">
+                <button class="btn primary" id="addFilesBtn">加入入库队列</button>
+                <button class="btn" id="clearQueueBtn">清空队列</button>
+              </div>
+              <p class="hint">原型阶段不会真正读取 PDF 内容，只记录文件和元数据并模拟切分。正式版会接入 PDF/OCR 解析、章节识别、页码引用和向量库。</p>
+            </div>
+          </div>
+          <div class="card">
+            <h3>入库队列</h3>
+            <div id="uploadQueueBox" class="empty">还没有待入库资料。选择文件后点击“加入入库队列”。</div>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <input type="text" id="docFilter" placeholder="按来源、地区、关键词筛选知识片段" style="max-width:360px">
+          <span class="source-chip">法规标准</span>
+          <span class="source-chip">文物志</span>
+          <span class="source-chip">地方志</span>
+          <span class="source-chip">文保名录</span>
+          <span class="source-chip">案例库</span>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>资料来源</th><th>地区</th><th>类型</th><th>片段内容</th><th>元数据</th></tr>
+            </thead>
+            <tbody id="knowledgeRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="page" id="page-indicators">
+        <div class="section-head">
+          <div>
+            <h2>指标体系配置</h2>
+            <p class="hint">来自《脆弱性评价指标体系.docx》的三级框架。星号指标在原型中归入 RAG 推理型。</p>
+          </div>
+          <select id="dimensionFilter" style="max-width:260px"></select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>一级维度</th><th>二级维度</th><th>三级指标</th><th>类型</th><th>评分方式</th></tr>
+            </thead>
+            <tbody id="indicatorRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="page" id="page-rules">
+        <div class="section-head">
+          <div>
+            <h2>强规则匹配配置</h2>
+            <p class="hint">结构化程度高的指标可以直接映射 1-5 分。这里提供试算器，方便检查规则是否符合专家经验。</p>
+          </div>
+          <button class="btn primary" id="calcRulesBtn">规则试算</button>
+        </div>
+
+        <div class="grid cols-2">
+          <div class="card">
+            <h3>对象字段</h3>
+            <div class="grid cols-2">
+              <div><label>保护等级</label><select id="ruleLevel"><option>国家级</option><option>省级</option><option>市县级</option><option>一般不可移动文物</option><option>未定级</option></select></div>
+              <div><label>年代</label><select id="ruleAge"><option>明清以前</option><option>清代</option><option>民国</option><option>1949-1978</option><option>当代</option></select></div>
+              <div><label>材料类型</label><select id="ruleMaterial"><option>砖木</option><option>木</option><option>砖石</option><option>石材</option><option>钢筋混凝土</option></select></div>
+              <div><label>结构类型</label><select id="ruleStructure"><option>砖木结构</option><option>木结构</option><option>砌体结构</option><option>框架结构</option><option>钢结构</option></select></div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>试算结果</h3>
+            <div id="ruleResult" class="reason-box">点击“规则试算”查看命中规则和分值。</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <h3>规则表示例</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>指标</th><th>字段</th><th>规则</th><th>分值</th></tr></thead>
+              <tbody id="ruleRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-rag">
+        <div class="section-head">
+          <div>
+            <h2>RAG 检索调试台</h2>
+            <p class="hint">选择认知推理型指标，查看自动生成的检索问题、召回证据、评分锚点和模拟 LLM 输出。</p>
+          </div>
+          <button class="btn primary" id="runRagBtn">检索并评分</button>
+        </div>
+
+        <div class="split">
+          <div class="card">
+            <div class="toolbar">
+              <select id="ragIndicator"></select>
+              <input id="ragQuery" type="text" placeholder="系统自动生成检索问题，也可以手动编辑">
+            </div>
+            <div class="grid cols-2">
+              <div>
+                <h3>评分锚点</h3>
+                <div id="anchorBox" class="reason-box"></div>
+              </div>
+              <div>
+                <h3>证据要求</h3>
+                <div id="evidenceNeedBox" class="reason-box"></div>
+              </div>
+            </div>
+            <h3 style="margin-top:16px">召回证据</h3>
+            <div class="evidence" id="retrievedEvidence"></div>
+          </div>
+
+          <div class="card">
+            <h3>LLM 约束评分输出</h3>
+            <div class="reason-box" id="llmOutput">选择指标后点击“检索并评分”。</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-assessment">
+        <div class="section-head">
+          <div>
+            <h2>单体文物评价</h2>
+            <p class="hint">这里是未来最常用的主界面：逐项查看规则命中、证据链、LLM 评分和专家最终分。</p>
+          </div>
+          <button class="btn primary" id="scoreAllBtn">重新评价当前对象</button>
+        </div>
+
+        <div class="toolbar">
+          <select id="siteSelect" style="max-width:280px"></select>
+          <select id="typeFilter" style="max-width:180px">
+            <option value="all">全部指标</option>
+            <option value="rule">规则匹配型</option>
+            <option value="rag">RAG 推理型</option>
+          </select>
+          <select id="confidenceFilter" style="max-width:180px">
+            <option value="all">全部置信度</option>
+            <option value="low">仅低置信度</option>
+            <option value="mid">中等置信度</option>
+            <option value="high">高置信度</option>
+          </select>
+        </div>
+
+        <div class="indicator-list" id="assessmentList"></div>
+      </section>
+
+      <section class="page" id="page-review">
+        <div class="section-head">
+          <div>
+            <h2>专家复核</h2>
+            <p class="hint">优先处理低置信度、证据不足、分值高且影响大的指标。修正会进入最终评分。</p>
+          </div>
+          <button class="btn primary" id="applyReviewBtn">应用专家修正</button>
+        </div>
+
+        <div class="card">
+          <div class="review-row"><div>指标</div><div>AI 分</div><div>专家分</div><div>状态</div></div>
+          <div id="reviewRows"></div>
+        </div>
+      </section>
+    </main>
+
+    <section class="right-panel">
+      <div class="drawer-title">
+        <h3>指标证据链</h3>
+        <span class="tag" id="drawerType">未选择</span>
+      </div>
+      <div id="drawerContent" class="empty">在“单体评价”或“RAG 调试台”中选择一个指标，右侧会显示规则、证据和评分解释。</div>
+    </section>
+  </div>
+
+  <script>
+    const sites = [
+      {
+        id: "G-1",
+        name: "张闻天故居",
+        district: "浦东新区",
+        address: "祝桥镇闻居路50号",
+        level: "国家级",
+        type: "名人故居",
+        age: "始建于 1892 年（清光绪年间）",
+        material: "砖木",
+        structure: "一正两厢房三合院砖木结构瓦顶平房",
+        status: "良好，1989 年全面修缮",
+        open: "8:30-11:30,13:00-16:30，周一闭馆",
+        tourism: "是"
+      },
+      {
+        id: "S-42",
+        name: "石库门里弄住宅",
+        district: "黄浦区",
+        address: "中心城区历史风貌保护区",
+        level: "市级",
+        type: "近现代重要史迹及代表性建筑",
+        age: "民国",
+        material: "砖木",
+        structure: "砖木结构里弄建筑，连续街巷界面",
+        status: "局部构件老化，街区肌理较完整",
+        open: "街区开放，部分建筑不可进入",
+        tourism: "否"
+      },
+      {
+        id: "Q-18",
+        name: "古桥遗址",
+        district: "青浦区",
+        address: "水系交汇区域",
+        level: "区级",
+        type: "古建筑",
+        age: "明清以前",
+        material: "石材",
+        structure: "石拱桥，外露构件长期受水湿环境影响",
+        status: "桥面磨损，局部风化",
+        open: "开放通行",
+        tourism: "是"
+      }
+    ];
+
+    const indicators = [
+      ["历史价值脆弱性 A1", "历史价值 B1", "文物年代", "rule"],
+      ["历史价值脆弱性 A1", "历史价值 B1", "文保等级", "rule"],
+      ["历史价值脆弱性 A1", "历史价值 B1", "文物类型", "rule"],
+      ["历史价值脆弱性 A1", "稀缺性与代表性 B2", "历史关联性", "rag"],
+      ["历史价值脆弱性 A1", "稀缺性与代表性 B2", "要素独特性", "rag"],
+      ["历史价值脆弱性 A1", "稀缺性与代表性 B2", "区域稀缺性", "rag"],
+      ["历史价值脆弱性 A1", "原真性与完整性 B3", "历史环境完整性", "rag"],
+      ["历史价值脆弱性 A1", "原真性与完整性 B3", "不可恢复性", "rag"],
+      ["活动利用脆弱性 A2", "使用开放性 B4", "开放程度", "rule"],
+      ["活动利用脆弱性 A2", "使用开放性 B4", "核心可及性", "rag"],
+      ["活动利用脆弱性 A2", "使用开放性 B4", "活动种类复杂性", "rag"],
+      ["活动利用脆弱性 A2", "使用开放性 B4", "保护管理水平", "rag"],
+      ["活动利用脆弱性 A2", "接触磨损压力 B5", "游览空间大小", "rag"],
+      ["活动利用脆弱性 A2", "接触磨损压力 B5", "材料磨损敏感", "rag"],
+      ["活动利用脆弱性 A2", "微环境扰动 B6", "空间封闭性", "rag"],
+      ["活动利用脆弱性 A2", "微环境扰动 B6", "微环境敏感材料", "rag"],
+      ["开发建设脆弱性 A3", "结构基础稳定性 B7", "结构老化", "rag"],
+      ["开发建设脆弱性 A3", "结构基础稳定性 B7", "结构类型", "rule"],
+      ["开发建设脆弱性 A3", "结构基础稳定性 B7", "结构尺度特征", "rag"],
+      ["开发建设脆弱性 A3", "空间风貌依赖性 B8", "空间格局关联", "rag"],
+      ["开发建设脆弱性 A3", "空间风貌依赖性 B8", "景观风貌依赖", "rag"],
+      ["环境污染脆弱性 A4", "空间污染沉积 B9", "材料类型", "rule"],
+      ["环境污染脆弱性 A4", "空间污染沉积 B9", "构件表皮复杂程度", "rag"],
+      ["环境污染脆弱性 A4", "水湿环境敏感 B10", "水湿材料敏感", "rule"],
+      ["环境污染脆弱性 A4", "水湿环境敏感 B10", "排水排湿条件", "rag"],
+      ["舆论传播脆弱性 A5", "政治文化象征性 B11", "红色文化属性", "rag"],
+      ["舆论传播脆弱性 A5", "政治文化象征性 B11", "重大历史事件", "rag"],
+      ["舆论传播脆弱性 A5", "政治文化象征性 B11", "名人故居属性", "rag"],
+      ["舆论传播脆弱性 A5", "公众传播性 B12", "城市地标性", "rag"],
+      ["舆论传播脆弱性 A5", "公众传播性 B12", "视觉可识别性", "rag"]
+    ].map((x, i) => ({ id: "C" + String(i + 1).padStart(2, "0"), dimension: x[0], sub: x[1], name: x[2], type: x[3] }));
+
+    const knowledge = [
+      {
+        source: "全国重点文物保护单位名录",
+        region: "上海",
+        kind: "文保名录",
+        text: "张闻天故居为全国重点文物保护单位，建筑始建于清光绪年间，是张闻天青少年时期生活的重要场所。",
+        meta: "level=国家级; person=张闻天; period=清"
+      },
+      {
+        source: "浦东新区文物志",
+        region: "浦东",
+        kind: "文物志",
+        text: "故居由一正两厢房组成，呈三合院格局，砖木结构瓦顶平房，院落空间和传统民居形制保存较完整。",
+        meta: "structure=三合院; material=砖木; integrity=较完整"
+      },
+      {
+        source: "地方革命史资料汇编",
+        region: "上海",
+        kind: "历史事件资料",
+        text: "张闻天是中国共产党早期重要领导人之一，其故居承担革命传统教育、人物纪念和地方红色文化展示功能。",
+        meta: "red_culture=true; celebrity=true; education=true"
+      },
+      {
+        source: "不可移动文物开放管理案例",
+        region: "上海",
+        kind: "典型案例",
+        text: "名人故居类建筑通常室内尺度较小，参观动线短，若长期开放并承接研学活动，容易形成局部拥挤和接触磨损。",
+        meta: "risk=crowding; risk=contact_wear"
+      },
+      {
+        source: "历史建筑材料保护研究",
+        region: "长三角",
+        kind: "学术文献",
+        text: "砖木结构和木构件对温湿度波动、白蚁、霉变以及人群活动引发的微环境扰动较为敏感，修缮需尽量保留原真材料。",
+        meta: "material=brick_wood; sensitivity=humidity"
+      },
+      {
+        source: "上海历史风貌区保护导则",
+        region: "上海",
+        kind: "行业标准",
+        text: "院落、里弄、连续街巷界面与周边尺度共同构成历史环境，周边新建工程可能削弱空间格局、视廊和风貌协调性。",
+        meta: "spatial_pattern=true; landscape_dependency=true"
+      }
+    ];
+
+    const uploadQueue = [];
+
+    const anchors = {
+      "历史关联性": ["1 分：缺少明确历史事件、人物或制度关联。", "3 分：与地方历史人物、事件或阶段性发展有关。", "5 分：与重大历史事件、重要人物、制度变迁或集体记忆高度相关。"],
+      "区域稀缺性": ["1 分：区域内同类对象较多，替代性强。", "3 分：区域内具有一定代表性，但并非唯一或极少。", "5 分：区域内少见、独有或具有不可替代代表性。"],
+      "历史环境完整性": ["1 分：本体与周边历史环境联系弱，环境破碎。", "3 分：本体保存较好，局部环境关系仍可识别。", "5 分：本体、院落、街巷或建筑群关系整体清晰。"],
+      "景观风貌依赖": ["1 分：价值主要依赖单体本身。", "3 分：对周边尺度、界面或视廊有一定依赖。", "5 分：价值高度依赖整体风貌、历史肌理和空间关系。"],
+      "材料磨损敏感": ["1 分：材料坚固且接触概率低。", "3 分：存在可接触构件或局部磨损风险。", "5 分：材料脆弱、可触摸面多且开放使用压力大。"],
+      "默认": ["1 分：证据不足或敏感性较低。", "3 分：有部分证据支持中等敏感。", "5 分：多源证据一致支持高度敏感。"]
+    };
+
+    const rules = [
+      ["文保等级", "保护等级", "国家级 / 省级 / 市县级 / 一般 / 未定级", "5 / 4 / 3 / 2 / 1"],
+      ["文物年代", "年代", "明清以前 / 清代 / 民国 / 1949-1978 / 当代", "5 / 4 / 3 / 2 / 1"],
+      ["结构类型", "结构", "木结构、砖木、砌体敏感；框架较低", "5 / 4 / 3 / 2"],
+      ["材料类型", "建造材料", "木、砖木、石材、砖石、混凝土", "5 / 4 / 4 / 3 / 2"],
+      ["开放程度", "开放状态", "开放参观、预约开放、街区开放、封闭", "5 / 4 / 3 / 1"]
+    ];
+
+    const state = {
+      page: "overview",
+      site: sites[0],
+      selectedIndicator: indicators[3],
+      scores: {},
+      expertScores: {}
+    };
+
+    function $(id) { return document.getElementById(id); }
+
+    function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+    function confidenceClass(c) {
+      if (c === "高") return "high";
+      if (c === "中") return "mid";
+      return "low";
+    }
+
+    function ruleScore(indicator, site) {
+      const levelMap = { "国家级": 5, "省级": 4, "市级": 3, "区级": 3, "市县级": 3, "一般不可移动文物": 2, "未定级": 1 };
+      if (indicator.name === "文保等级") return { score: levelMap[site.level] || 3, why: `保护等级为“${site.level}”，命中等级映射规则。` };
+      if (indicator.name === "文物年代") {
+        const text = site.age;
+        const score = text.includes("明清以前") ? 5 : text.includes("清") ? 4 : text.includes("民国") ? 3 : text.includes("1949") ? 2 : 1;
+        return { score, why: `年代字段为“${text}”，按年代久远程度映射。` };
+      }
+      if (indicator.name === "文物类型") {
+        const score = site.type.includes("名人") || site.type.includes("史迹") ? 5 : site.type.includes("古建筑") ? 4 : 3;
+        return { score, why: `类型为“${site.type}”，按历史叙事和类型代表性映射。` };
+      }
+      if (indicator.name === "开放程度") {
+        const score = site.open.includes("开放") || site.open.includes("8:") ? 4 : site.open.includes("不可进入") ? 2 : 3;
+        return { score, why: `开放状态为“${site.open}”，存在公众进入或参观压力。` };
+      }
+      if (indicator.name === "结构类型") {
+        const s = site.structure;
+        const score = s.includes("木") ? 4 : s.includes("砌体") ? 3 : s.includes("框架") ? 2 : 3;
+        return { score, why: `结构描述为“${s}”，按结构抗扰动敏感性映射。` };
+      }
+      if (indicator.name === "材料类型" || indicator.name === "水湿材料敏感") {
+        const m = site.material;
+        const score = m.includes("木") ? 5 : m.includes("石") ? 4 : m.includes("砖") ? 4 : 2;
+        return { score, why: `材料为“${m}”，按污染沉积、水湿和磨损敏感性映射。` };
+      }
+      return { score: 3, why: "默认规则分值，需进一步配置。" };
+    }
+
+    function retrieve(indicator, site, query) {
+      const tokens = [indicator.name, site.name, site.type, site.material, site.structure, "历史", "文物", "保护"].join(" ");
+      return knowledge.map((doc, idx) => {
+        let score = 0.48;
+        const hay = [doc.text, doc.meta, doc.kind, doc.source].join(" ");
+        for (const token of tokens.split(/\s+/)) {
+          if (token && hay.includes(token)) score += 0.06;
+        }
+        if ((query || "").includes("红色") && hay.includes("红色")) score += 0.18;
+        if (indicator.name.includes("风貌") && hay.includes("风貌")) score += 0.22;
+        if (indicator.name.includes("材料") && hay.includes("材料")) score += 0.18;
+        if (indicator.name.includes("空间") && hay.includes("空间")) score += 0.14;
+        if (indicator.name.includes("历史") && hay.includes("历史")) score += 0.12;
+        return { ...doc, score: Math.min(.96, score), idx };
+      }).sort((a, b) => b.score - a.score).slice(0, 4);
+    }
+
+    function ragScore(indicator, site) {
+      const ev = retrieve(indicator, site, defaultQuery(indicator, site));
+      let base = 3;
+      const text = ev.map(x => x.text + x.meta).join(" ");
+      if (site.level === "国家级") base += .6;
+      if (site.type.includes("名人") && ["历史关联性", "名人故居属性", "重大历史事件", "红色文化属性"].includes(indicator.name)) base += 1.2;
+      if (site.material.includes("木") && ["材料磨损敏感", "微环境敏感材料", "不可恢复性"].includes(indicator.name)) base += .8;
+      if (site.structure.includes("三合院") && ["历史环境完整性", "空间格局关联", "景观风貌依赖"].includes(indicator.name)) base += .7;
+      if (text.includes("较完整") && indicator.name.includes("完整")) base += .5;
+      if (indicator.name.includes("城市地标")) base -= .2;
+      const score = clamp(Math.round(base), 1, 5);
+      const confidence = ev[0].score > .84 ? "高" : ev[0].score > .72 ? "中" : "低";
+      return {
+        score,
+        confidence,
+        evidence: ev,
+        why: `系统召回 ${ev.length} 条证据。证据显示“${site.name}”在${site.type}、${site.material}、${site.structure}及开放利用方面具有相关特征；结合“${indicator.name}”评分锚点，判断为 ${score} 分，置信度为${confidence}。`
+      };
+    }
+
+    function scoreIndicator(indicator, site) {
+      if (indicator.type === "rule") {
+        const r = ruleScore(indicator, site);
+        return { ...r, confidence: "高", evidence: [], method: "规则匹配" };
+      }
+      const r = ragScore(indicator, site);
+      return { ...r, method: "RAG 推理" };
+    }
+
+    function scoreAll() {
+      state.scores = {};
+      indicators.forEach(ind => {
+        state.scores[ind.id] = scoreIndicator(ind, state.site);
+      });
+      updateMetric();
+    }
+
+    function defaultQuery(indicator, site) {
+      return `${site.name} ${indicator.name} ${site.type} ${site.material} ${site.structure} 证据`;
+    }
+
+    function renderSiteProfile() {
+      $("siteProfile").innerHTML = `
+        <b>名称</b><span>${state.site.name}</span>
+        <b>区位</b><span>${state.site.district}，${state.site.address}</span>
+        <b>等级</b><span>${state.site.level}</span>
+        <b>类型</b><span>${state.site.type}</span>
+        <b>年代</b><span>${state.site.age}</span>
+        <b>材料/结构</b><span>${state.site.material}；${state.site.structure}</span>
+        <b>开放</b><span>${state.site.open}</span>`;
+    }
+
+    function renderKnowledge() {
+      const filter = ($("docFilter")?.value || "").trim();
+      $("knowledgeRows").innerHTML = knowledge
+        .filter(d => !filter || JSON.stringify(d).includes(filter))
+        .map(d => `<tr><td>${d.source}</td><td>${d.region}</td><td><span class="tag">${d.kind}</span></td><td>${d.text}</td><td>${d.meta}</td></tr>`)
+        .join("");
+    }
+
+    function renderUploadQueue() {
+      if (!uploadQueue.length) {
+        $("uploadQueueBox").className = "empty";
+        $("uploadQueueBox").innerHTML = "还没有待入库资料。选择文件后点击“加入入库队列”。";
+        return;
+      }
+      $("uploadQueueBox").className = "";
+      $("uploadQueueBox").innerHTML = uploadQueue.map(item => `
+        <div class="queue-item">
+          <div>
+            <div class="file-name" title="${item.name}">${item.name}</div>
+            <span class="hint">${item.kind} · ${item.region} · ${item.purpose}</span>
+          </div>
+          <span class="tag">${item.trust}</span>
+          <span class="tag ${item.status === "已向量化" ? "high" : item.status === "解析中" ? "mid" : ""}">${item.status}</span>
+        </div>`).join("");
+    }
+
+    function addFilesToQueue() {
+      const files = Array.from($("fileInput").files || []);
+      if (!files.length) {
+        log(["请选择 PDF、Word、Excel 或文本资料后再加入队列。"]);
+        return;
+      }
+      files.forEach(file => {
+        uploadQueue.push({
+          name: file.name,
+          size: file.size,
+          kind: $("uploadKind").value,
+          region: $("uploadRegion").value.trim() || "未标注",
+          purpose: $("uploadPurpose").value,
+          trust: $("uploadTrust").value,
+          status: "待处理"
+        });
+      });
+      $("fileInput").value = "";
+      renderUploadQueue();
+      log([`已加入 ${files.length} 个文件到知识库入库队列。`, "下一步点击“模拟入库并向量化”，查看解析、切分、索引状态。"]);
+    }
+
+    function ingestUploadQueue() {
+      if (!uploadQueue.length) {
+        log(["当前没有待入库资料。可以先在知识库管理页上传法律法规、指南 PDF、文物志或地方志。"]);
+        return;
+      }
+      uploadQueue.forEach((item, idx) => {
+        item.status = idx % 2 === 0 ? "解析中" : "待处理";
+      });
+      renderUploadQueue();
+      setTimeout(() => {
+        uploadQueue.forEach(item => {
+          item.status = "已向量化";
+          knowledge.unshift({
+            source: item.name,
+            region: item.region,
+            kind: item.kind,
+            text: `【模拟切分片段】${item.name} 已作为“${item.purpose}”入库。正式版会从 PDF/Word 中抽取章节、页码、条文、图表说明和文物对象事实，并生成可追溯证据片段。`,
+            meta: `trust=${item.trust}; purpose=${item.purpose}; filename=${item.name}`
+          });
+        });
+        renderUploadQueue();
+        renderKnowledge();
+        log([
+          `知识库入库完成：${uploadQueue.length} 个文件已解析、切分并写入向量索引。`,
+          "已在知识片段表中生成模拟证据。正式版会保留页码、章节、来源类型和 OCR 状态。"
+        ]);
+      }, 520);
+    }
+
+    function renderIndicators() {
+      const dims = ["全部维度", ...Array.from(new Set(indicators.map(x => x.dimension)))];
+      $("dimensionFilter").innerHTML = dims.map(d => `<option>${d}</option>`).join("");
+      updateIndicatorTable();
+      const ragOptions = indicators.filter(i => i.type === "rag").map(i => `<option value="${i.id}">${i.name} · ${i.sub}</option>`).join("");
+      $("ragIndicator").innerHTML = ragOptions;
+      $("ragIndicator").value = state.selectedIndicator.id;
+      updateRagBoxes();
+    }
+
+    function updateIndicatorTable() {
+      const dim = $("dimensionFilter").value || "全部维度";
+      $("indicatorRows").innerHTML = indicators
+        .filter(i => dim === "全部维度" || i.dimension === dim)
+        .map(i => `<tr><td>${i.dimension}</td><td>${i.sub}</td><td>${i.name}</td><td><span class="tag ${i.type}">${i.type === "rule" ? "规则匹配型" : "RAG 推理型"}</span></td><td>${i.type === "rule" ? "结构化字段 1-5 级映射" : "检索证据 + 评分锚点 + LLM 判断"}</td></tr>`)
+        .join("");
+    }
+
+    function renderRules() {
+      $("ruleRows").innerHTML = rules.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join("");
+    }
+
+    function renderSiteSelect() {
+      $("siteSelect").innerHTML = sites.map(s => `<option value="${s.id}">${s.id} · ${s.name}</option>`).join("");
+      $("siteSelect").value = state.site.id;
+    }
+
+    function renderAssessmentList() {
+      const type = $("typeFilter")?.value || "all";
+      const conf = $("confidenceFilter")?.value || "all";
+      const items = indicators.filter(ind => {
+        const result = state.scores[ind.id] || scoreIndicator(ind, state.site);
+        const c = confidenceClass(result.confidence);
+        return (type === "all" || ind.type === type) && (conf === "all" || conf === c);
+      });
+      $("assessmentList").innerHTML = items.map(ind => {
+        const r = state.scores[ind.id] || scoreIndicator(ind, state.site);
+        const finalScore = state.expertScores[ind.id] || r.score;
+        return `<div class="indicator-row ${state.selectedIndicator.id === ind.id ? "active" : ""}" data-id="${ind.id}">
+          <div class="score s${finalScore}">${finalScore}</div>
+          <div><strong>${ind.name}</strong><small>${ind.dimension} / ${ind.sub}<br>${r.why}</small></div>
+          <span class="tag ${ind.type === "rule" ? "rule" : "rag"}">${ind.type === "rule" ? "规则" : r.confidence + "置信"}</span>
+        </div>`;
+      }).join("");
+      document.querySelectorAll(".indicator-row").forEach(row => row.addEventListener("click", () => {
+        state.selectedIndicator = indicators.find(i => i.id === row.dataset.id);
+        renderAssessmentList();
+        renderDrawer();
+      }));
+    }
+
+    function renderReview() {
+      const riskItems = indicators
+        .map(ind => ({ ind, r: state.scores[ind.id] || scoreIndicator(ind, state.site) }))
+        .filter(x => x.r.confidence !== "高" || x.r.score >= 4)
+        .slice(0, 12);
+      $("reviewRows").innerHTML = riskItems.map(({ ind, r }) => `
+        <div class="review-row">
+          <div><strong>${ind.name}</strong><br><span class="hint">${ind.dimension} / ${r.method || (ind.type === "rule" ? "规则匹配" : "RAG 推理")}</span></div>
+          <div><span class="score s${r.score}">${r.score}</span></div>
+          <div><input type="number" min="1" max="5" value="${state.expertScores[ind.id] || r.score}" data-review="${ind.id}"></div>
+          <div><span class="tag ${confidenceClass(r.confidence)}">${r.confidence}</span></div>
+        </div>`).join("");
+    }
+
+    function updateRagBoxes() {
+      const ind = indicators.find(i => i.id === $("ragIndicator").value) || state.selectedIndicator;
+      state.selectedIndicator = ind;
+      $("ragQuery").value = defaultQuery(ind, state.site);
+      const a = anchors[ind.name] || anchors["默认"];
+      $("anchorBox").innerHTML = a.join("<br>");
+      $("evidenceNeedBox").innerHTML = "至少 2 条可追溯来源；优先使用文物志、地方志、文保名录、学术文献；证据需要能直接支持指标含义。";
+      renderDrawer();
+    }
+
+    function runRag() {
+      const ind = indicators.find(i => i.id === $("ragIndicator").value);
+      const ev = retrieve(ind, state.site, $("ragQuery").value);
+      const result = ragScore(ind, state.site);
+      state.scores[ind.id] = result;
+      $("retrievedEvidence").innerHTML = ev.map((d, idx) => `
+        <div class="evidence-item ${idx === 0 ? "active" : ""}">
+          <div class="evidence-meta">
+            <span class="tag">${d.kind}</span>
+            <span class="tag">相似度 ${d.score.toFixed(2)}</span>
+            <span class="tag">${d.source}</span>
+          </div>
+          <p class="quote">${d.text}</p>
+        </div>`).join("");
+      $("llmOutput").innerHTML = `
+        <b>指标：</b>${ind.name}<br>
+        <b>建议分值：</b>${result.score} / 5<br>
+        <b>置信度：</b>${result.confidence}<br>
+        <b>证据摘要：</b>${ev.slice(0, 2).map(x => x.text).join(" ")}<br>
+        <b>推理依据：</b>${result.why}`;
+      state.selectedIndicator = ind;
+      renderDrawer();
+      renderAssessmentList();
+    }
+
+    function renderDrawer() {
+      const ind = state.selectedIndicator;
+      const r = state.scores[ind.id] || scoreIndicator(ind, state.site);
+      $("drawerType").textContent = ind.type === "rule" ? "规则匹配型" : "RAG 推理型";
+      $("drawerType").className = `tag ${ind.type}`;
+      if (ind.type === "rule") {
+        $("drawerContent").className = "reason-box";
+        $("drawerContent").innerHTML = `<b>${ind.name}</b><br><br><b>自动分值：</b>${r.score} / 5<br><b>命中规则：</b>${r.why}<br><b>置信度：</b>${r.confidence}<br><br>后续接入真实系统时，这里会显示规则版本号、字段来源、缺失值处理和专家覆盖记录。`;
+        return;
+      }
+      const evidenceHtml = (r.evidence || []).map(d => `<div class="evidence-item"><div class="evidence-meta"><span class="tag">${d.kind}</span><span class="tag">${d.source}</span><span class="tag">${d.score.toFixed(2)}</span></div><p class="quote">${d.text}</p></div>`).join("");
+      $("drawerContent").className = "";
+      $("drawerContent").innerHTML = `
+        <div class="reason-box"><b>${ind.name}</b><br><b>自动分值：</b>${r.score} / 5<br><b>置信度：</b>${r.confidence}<br><b>推理依据：</b>${r.why}</div>
+        <h3 style="margin-top:14px">引用证据</h3>
+        <div class="evidence">${evidenceHtml}</div>
+        <h3 style="margin-top:14px">专家意见</h3>
+        <textarea placeholder="记录专家修正理由，例如：地方志证据不足，需要补充同类型数量统计。"></textarea>`;
+    }
+
+    function updateMetric() {
+      const values = indicators.map(ind => state.expertScores[ind.id] || (state.scores[ind.id] || scoreIndicator(ind, state.site)).score);
+      const avg = values.reduce((a, b) => a + b, 0) / values.length;
+      $("metricScore").textContent = avg.toFixed(2);
+    }
+
+    function log(lines) {
+      $("runLog").textContent = lines.join("\n");
+    }
+
+    function runDemo() {
+      const lines = [];
+      let step = 0;
+      const messages = [
+        "读取文物对象字段：保护等级、年代、材料、结构、开放状态。",
+        "将 7 个指标派发到规则引擎，23 个指标派发到 RAG 推理链。",
+        "生成检索问题并召回文物志、文保名录、地方史料和案例片段。",
+        "根据评分锚点进行证据约束评分，输出分值、置信度和推理依据。",
+        "筛选低置信度和高影响指标，进入专家复核队列。"
+      ];
+      document.querySelectorAll(".step").forEach((el, idx) => {
+        el.classList.toggle("active", idx === 0);
+        el.classList.remove("done");
+      });
+      const timer = setInterval(() => {
+        lines.push(`[${String(step + 1).padStart(2, "0")}] ${messages[step]}`);
+        log(lines);
+        document.querySelectorAll(".step").forEach((el, idx) => {
+          el.classList.toggle("active", idx === step);
+          el.classList.toggle("done", idx < step);
+        });
+        $("flowProgress").style.width = `${(step + 1) * 20}%`;
+        step++;
+        if (step >= messages.length) {
+          clearInterval(timer);
+          scoreAll();
+          renderAssessmentList();
+          renderReview();
+        }
+      }, 520);
+    }
+
+    function calcRules() {
+      const fake = {
+        ...state.site,
+        level: $("ruleLevel").value,
+        age: $("ruleAge").value,
+        material: $("ruleMaterial").value,
+        structure: $("ruleStructure").value
+      };
+      const picks = indicators.filter(i => i.type === "rule").map(i => ({ i, r: ruleScore(i, fake) }));
+      $("ruleResult").innerHTML = picks.map(x => `<b>${x.i.name}</b>：${x.r.score} 分<br><span class="hint">${x.r.why}</span>`).join("<br><br>");
+    }
+
+    function exportJson() {
+      const payload = {
+        site: state.site,
+        generated_at: new Date().toISOString(),
+        scores: indicators.map(ind => {
+          const r = state.scores[ind.id] || scoreIndicator(ind, state.site);
+          return {
+            indicator: ind.name,
+            dimension: ind.dimension,
+            type: ind.type,
+            ai_score: r.score,
+            expert_score: state.expertScores[ind.id] || null,
+            confidence: r.confidence,
+            reasoning: r.why,
+            evidence: (r.evidence || []).map(e => ({ source: e.source, kind: e.kind, text: e.text, similarity: e.score }))
+          };
+        })
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${state.site.name}_rag_assessment_demo.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function bindEvents() {
+      document.querySelectorAll(".nav-button").forEach(btn => btn.addEventListener("click", () => {
+        state.page = btn.dataset.page;
+        document.querySelectorAll(".nav-button").forEach(x => x.classList.toggle("active", x === btn));
+        document.querySelectorAll(".page").forEach(x => x.classList.toggle("active", x.id === `page-${state.page}`));
+      }));
+      $("demoBtn").addEventListener("click", runDemo);
+      $("runFullBtn").addEventListener("click", runDemo);
+      $("exportBtn").addEventListener("click", exportJson);
+      $("mockIngestBtn").addEventListener("click", ingestUploadQueue);
+      $("addFilesBtn").addEventListener("click", addFilesToQueue);
+      $("clearQueueBtn").addEventListener("click", () => {
+        uploadQueue.splice(0, uploadQueue.length);
+        renderUploadQueue();
+        log(["入库队列已清空。"]);
+      });
+      $("docFilter").addEventListener("input", renderKnowledge);
+      $("dimensionFilter").addEventListener("change", updateIndicatorTable);
+      $("calcRulesBtn").addEventListener("click", calcRules);
+      $("ragIndicator").addEventListener("change", updateRagBoxes);
+      $("runRagBtn").addEventListener("click", runRag);
+      $("scoreAllBtn").addEventListener("click", () => { scoreAll(); renderAssessmentList(); renderReview(); renderDrawer(); });
+      $("siteSelect").addEventListener("change", () => {
+        state.site = sites.find(s => s.id === $("siteSelect").value);
+        state.scores = {};
+        state.expertScores = {};
+        renderSiteProfile();
+        scoreAll();
+        renderAssessmentList();
+        renderReview();
+        renderDrawer();
+        updateRagBoxes();
+      });
+      $("typeFilter").addEventListener("change", renderAssessmentList);
+      $("confidenceFilter").addEventListener("change", renderAssessmentList);
+      $("applyReviewBtn").addEventListener("click", () => {
+        document.querySelectorAll("[data-review]").forEach(input => {
+          state.expertScores[input.dataset.review] = clamp(Number(input.value) || 3, 1, 5);
+        });
+        updateMetric();
+        renderAssessmentList();
+        renderDrawer();
+      });
+    }
+
+    function init() {
+      renderSiteProfile();
+      renderKnowledge();
+      renderUploadQueue();
+      renderIndicators();
+      renderRules();
+      renderSiteSelect();
+      scoreAll();
+      renderAssessmentList();
+      renderReview();
+      renderDrawer();
+      bindEvents();
+      runRag();
+    }
+
+    init();
+  </script>
+</body>
+</html>
