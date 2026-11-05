@@ -15,6 +15,8 @@ if {p.name for p in (root/'RAG_datasource').glob('*.pdf')}!={d['filename'] for d
 summary=json.loads((src/'completion_summary.json').read_text());ind=clean(json.loads((src/'indicators.json').read_text()))
 (out/'manifest.json').write_text(json.dumps({'summary':summary,'documents':docs,'candidates':len(ind),'scope':'41 provided documents; extracted candidates require review'},ensure_ascii=False))
 (out/'indicators.json').write_text(json.dumps(ind,ensure_ascii=False))
+graph=clean(json.loads((src/'knowledge_graph.json').read_text()))
+(out/'knowledge_graph.json').write_text(json.dumps(graph,ensure_ascii=False,separators=(',',':')))
 for name in ['knowledge_graph.html','evidence_browser.html','topic_graph.html']:
  s=(src/name).read_text();s=re.sub(r'D:\\\\课题\\\\十四五文物资源\\\\rag_workbench\\\\RAG_datasource\\\\','',s)
  if name=='knowledge_graph.html':
