@@ -1,6 +1,6 @@
 {
   "generated_by": "heritage-pages-publisher",
-  "source_commit": "abdbe5234574281501ae2aae5de8cabe8dc1e2a6",
+  "source_commit": "1c5caa6768390450abd4b7b9168886d6eb8f6fef",
   "snapshot": {
     "exported_at": "2026-11-04T09:20:17.981Z",
     "source_origin": "https://heritage-sensitivity-han-2026.wanyinhan98.chatgpt.site",
@@ -18,7 +18,39 @@
     },
     "buildings_sha256": "3fa2cf7f26fc48cd372e86546f44015eb8e88dd8dbda653b422cd9004dd00315",
     "building_archive_bytes": 681922386,
-    "site_count": 767,
-    "score_count": 20304
+    "site_count": 763,
+    "score_count": 20250,
+    "heritage_cleaning": {
+      "published_objects": 763,
+      "source_point_records": 767,
+      "duplicates_removed": 4,
+      "removed": [
+        {
+          "id": "S-3",
+          "duplicate_of": "S-1",
+          "name": "黄炎培故居",
+          "reason": "同一处故居的两条点位记录"
+        },
+        {
+          "id": "S-11",
+          "duplicate_of": "G-30",
+          "name": "圣三一基督教堂",
+          "reason": "同一座教堂的市级与国家级重复记录"
+        },
+        {
+          "id": "S-159",
+          "duplicate_of": "G-29",
+          "name": "上海工部局宰牲场旧址",
+          "reason": "同一处旧址的市级与国家级重复记录"
+        },
+        {
+          "id": "S-252",
+          "duplicate_of": "S-2",
+          "name": "太平天国烈士墓",
+          "reason": "名称笔误（基/墓）造成的重复点位"
+        }
+      ],
+      "rule": "每条文物对象只保留一条点位记录；重复记录的对象属性、评分与证据已由保留记录承载。"
+    }
   }
 }
