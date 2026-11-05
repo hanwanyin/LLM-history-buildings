@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import ts from 'typescript';
-import { PMTiles } from 'pmtiles';
 const origin = process.env.PAGES_TEST_ORIGIN || 'http://127.0.0.1:4173';
 const base = origin + '/LLM-history-buildings/';
 const originalFetch = globalThis.fetch;
@@ -20,11 +19,10 @@ async function moduleFrom(file, prefix = '') {
   return import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'));
 }
 const client = await moduleFrom('lib/client-data.ts', 'const __PAGES_MIRROR__=true; const __PAGES_BASE__="/LLM-history-buildings/";\n');
-const { ShardedPMTilesSource } = await moduleFrom('lib/sharded-pmtiles.ts');
 const boot = await client.api('bootstrap');
-assert.equal(boot.mapScores.length, 767 * 5);
-assert.equal(new Set(boot.mapScores.map(row => row.site_id + '|' + row.dimension)).size, 767 * 5);
-assert.equal(boot.stats.sites, 767); assert.equal(boot.user.admin, false); assert.ok(boot.snapshot.exported_at);
+assert.equal(boot.mapScores.length, 763 * 5);
+assert.equal(new Set(boot.mapScores.map(row => row.site_id + '|' + row.dimension)).size, 763 * 5);
+assert.equal(boot.stats.sites, 763); assert.equal(boot.stats.scores, 20250); assert.equal(boot.heritage_cleaning.duplicates_removed, 4); assert.equal(boot.user.admin, false); assert.ok(boot.snapshot.exported_at);
 const detail = await client.api('sites/G-1');
 assert.equal(detail.scores.length, 27);
 for (const row of detail.dimensions) assert.equal(boot.mapScores.find(score => score.site_id === 'G-1' && score.dimension === row.dimension).score, row.score);
@@ -45,22 +43,29 @@ for (const source of sources.sources) {
   const bytes = Buffer.from(await response.arrayBuffer());
   assert.equal(createHash('sha256').update(bytes).digest('hex'), source.sha256);
 }
-const archive = await fs.readFile('data/shanghai-buildings.pmtiles');
-const source = new ShardedPMTilesSource(base + 'map/archive.json', base);
-for (const [offset, length] of [[0,16384],[1048570,100],[archive.length-1000,1000],[50000000,3000000]]) {
-  const actual = await source.getBytes(offset, length);
-  assert.deepEqual(Buffer.from(actual.data), archive.subarray(offset,offset+length));
+// Building footprints ship as spatially tiled GeoParquet decoded in the browser.
+const buildings = await (await fetch(base + 'buildings/manifest.json')).json();
+assert.equal(buildings.schema, 'herisk-building-parquet-v1');
+assert.equal(buildings.tile_zoom, 14);
+assert.equal(buildings.source.buildings, 1570932);
+assert.ok(Object.keys(buildings.tile_index).length > 1500);
+for (const hazard of ['bendi','kaifa','huodong','weihuapin']) {
+  const overview = buildings.overviews[hazard];
+  const response = await fetch(base + 'buildings/' + overview.file);
+  assert.equal(response.status, 200, 'parquet-derived ' + hazard + ' overview');
+  assert.equal(overview.coordinates.length, 4);
 }
-await assert.rejects(source.getBytes(-1,1));
-const controller = new AbortController(); controller.abort();
-await assert.rejects(source.getBytes(0,100,controller.signal), { name:'AbortError' });
-const pm = new PMTiles(source);
-assert.equal((await pm.getHeader()).maxZoom,16);
-for (const id of ['G-1','G-2','G-6']) {
-  const item = boot.sites.find(site => site.id === id), z=16;
-  const x=Math.floor(((item.map_lon??item.longitude)+180)/360*2**z);
-  const y=Math.floor((1-Math.asinh(Math.tan((item.map_lat??item.latitude)*Math.PI/180))/Math.PI)/2*2**z);
-  const tile=await pm.getZxy(z,x,y); assert.ok(tile?.data.byteLength>100, `SHP tile for ${id}`);
-}
+const dense = Object.keys(buildings.tile_index).sort((a, b) => buildings.tile_index[b][0] - buildings.tile_index[a][0])[0];
+const tileResponse = await fetch(base + 'buildings/tiles/14/' + dense + '.parquet');
+assert.equal(tileResponse.status, 200);
+const tileBytes = Buffer.from(await tileResponse.arrayBuffer());
+assert.equal(tileBytes.subarray(0, 4).toString('latin1'), 'PAR1', 'tile is a real Parquet file');
+assert.equal(tileBytes.subarray(tileBytes.length - 4).toString('latin1'), 'PAR1');
+assert.equal(tileBytes.length, buildings.tile_index[dense][1]);
+const atlas = await (await fetch(base + 'risk-atlas/manifest.json')).json();
+assert.equal(atlas.point_count, 763);
+assert.equal(atlas.raw_point_records, 767);
+assert.equal(atlas.rasters, undefined, 'no TIF-derived raster remains on the risk page');
+assert.equal(requests.some(url => url.includes('map/archive')), false, 'the PMTiles mirror is gone');
 assert.equal(requests.some(url => url.includes('/api/')), false);
-console.log(JSON.stringify({ passed:true, stats:boot.stats, checks:'project path; no old backend reads; read-only writes rejected; 6 source checksums; evidence; missing scores; PMTiles ranges/cancellation/SHP tiles', requests:requests.length }));
+console.log(JSON.stringify({ passed:true, stats:boot.stats, checks:'project path; no old backend reads; read-only writes rejected; 6 source checksums; evidence; missing scores; GeoParquet tiles; parquet-derived overviews', requests:requests.length }));

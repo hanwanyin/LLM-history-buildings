@@ -16,7 +16,7 @@
 
 ## 数据口径
 
-767 处文物、20,304 条 Excel 指标记录、27 项指标、五个维度、6 份来源。数据使用当前数据库或标有日期的公开快照，不硬编码复核结果。地图为 CSV 原始敏感性分值：4—5 高、3 中、1—2 低；空值和0分不转换为低风险。Excel 均值排除空值，保留原值及专家修正。
+763 处文物对象（767 条源点位记录，4 条重复点位已合并）、20,250 条 Excel 指标记录、27 项指标、五个维度、6 份来源。数据使用当前数据库或标有日期的公开快照，不硬编码复核结果。地图为 CSV 原始敏感性分值：4—5 高、3 中、1—2 低；空值和0分不转换为低风险。Excel 均值排除空值，保留原值及专家修正。
 
 建筑群风险、网络渗流需接入经过验证的模型及输入；目前提供输入检查与计算请求草稿，不生成虚假计算结果。GitHub Pages 为公开快照，上传、审核与数据库写入由云端提供。
 
@@ -27,11 +27,11 @@
 字体使用本地 Arial/Helvetica 与中文无衬线字体。桌面以紧凑统计和地图/图谱并列为主，小屏纵向排列。图谱支持缩放、拖动、展开画布、证据详情及导出；弹窗支持 Esc 和焦点管理。
 
 ## Five-hazard inputs (2026-11-04)
-Building-group and percolation modules now consume user-supplied `五类风险_绘图数据` via reproducible `scripts/prepare-risk-atlas.py` derivatives. The 1,484,693 building records are counted once in 500 m EPSG:32651 cells by interior representative point, with finite-value equal-building means and maxima. All 767 supplied heritage-point records retain their source IDs and raw values; 22 sentiment gaps remain null. IDs are not silently joined to earlier SHP IDs. Existing vulnerability scores remain separate.
+Building-group and percolation modules now consume user-supplied `五类风险_绘图数据` via reproducible `scripts/prepare-risk-atlas.py` derivatives. The 1,570,932 cleaned building records are counted once in 500 m EPSG:32651 cells by interior representative point, with finite-value equal-building means and maxima. The 763 cleaned heritage objects retain their source IDs and raw values; 22 sentiment gaps remain null. IDs are not silently joined to earlier SHP IDs. Existing vulnerability scores remain separate.
 
 Eight nearest-neighbour EPSG:3857 web raster previews are explicitly display-only; development imagery is the provided IDW + 300 m Gaussian field, not raw risk. Full-population statistics and cell analysis use source GeoParquet, not raster pixels. Source checksums and definitions are downloadable. Threshold connected components support four/eight-neighbour adjacency, minimum cell count and GeoJSON export with parameters; they are exploratory regions, not validated percolation, contagion probabilities, intervention zones or legal protection extents. Sentiment has no building surface and is point-only. Dark/light themes and English/Chinese labels share these distinctions.
 
 ## Cleaned footprint / Parquet revision
 The building-risk map now renders vector footprints from `全部建筑地块_含文物属性_SHP.zip`, with four original risk attributes from GeoParquet. It no longer renders a raster or default grid on that page. Geometry-verified matching is mandatory because SHP `id` is non-unique and source rows changed. Unmatched values stay missing (grey); development raw zeros are preserved. PMTiles contains zooms 10–16; higher zoom overzooms vectors rather than pixels. City-level view below zoom 10 shows boundary and heritage points.
 
-`prepare-clean-buildings.py` records SHA-256 provenance, geometry linkage counts and named one-to-many heritage associations; `prepare-clean-risk-statistics.py` recomputes exploratory cells from the same cleaned geometry and matched risks. The `outside_points` notes are published as source observations, not instructions to delete heritage records. Unresolved source names remain in the audit. Previous spatial records stay in D1; a versioned clean baseline takes precedence, and subsequent administrator corrections use optimistic revision checks starting at 1000. Existing scores and reviews are unchanged.
+`prepare-clean-buildings.py` records SHA-256 provenance, geometry linkage counts and named one-to-many heritage associations; `prepare-risk-atlas.py` recomputes exploratory cells from the same cleaned geometry and matched risks, and `prepare-building-parquet.py` writes the GeoParquet tiles that the map decodes. The `outside_points` notes are published as source observations, not instructions to delete heritage records. Unresolved source names remain in the audit. Previous spatial records stay in D1; a versioned clean baseline takes precedence, and subsequent administrator corrections use optimistic revision checks starting at 1000. Existing scores and reviews are unchanged.

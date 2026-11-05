@@ -12,12 +12,13 @@
 
 需要 Node.js 24、项目依赖、本机已有的 GitHub 登录，以及能访问原管理站的网络。脚本只读取原站的公开接口，保持空值、原始分值、公开复核历史和来源信息，不导出管理令牌、身份信息或审计表。数据与导出文件不进入 main 分支。
 
-1. `npm run pages:export`：读取 767 处档案、评分、建筑关联与来源；校验 6 个原始文件 SHA-256；将本地 `data/shanghai-buildings.pmtiles` 切成 1 MB 分块。
-2. `npm run pages:build`：生成 `outputs/github-pages/`。
-3. `npm run pages:preview`：本地预览；运行 `node scripts/test-pages.mjs` 验证。
-4. 将本次源代码提交并推送至 main。
-5. `node scripts/publish-pages.mjs`：发布产物至 gh-pages 分支，并在首次发布时启用 Pages。使用本机 Git 凭据助手，不打印、存盘或嵌入令牌。不会强制推送。
-6. 等待仓库 Pages 构建成功，再验证线上首页、数据和建筑分块。
+1. `python scripts/prepare-building-parquet.py`：用清理后 SHP 与 GeoParquet 风险值生成 `public/buildings/`（2,181 个 14 级瓦片 GeoParquet、四张低缩放聚合展示面和清单）。
+2. `npm run pages:export`：读取 767 条源点位记录、评分、建筑关联与来源；校验 6 个原始文件 SHA-256。
+3. `npm run pages:build`：把 4 条重复点位合并为 763 处文物对象，复制 `public/buildings`、`public/risk-atlas`、`public/clean-buildings`，生成 `outputs/github-pages/`。
+4. `npm run pages:preview`：本地预览；运行 `node scripts/test-pages.mjs`、`node scripts/test-building-parquet.mjs` 验证。
+5. 将本次源代码提交并推送至 main。
+6. `node scripts/publish-pages.mjs`：发布产物至 gh-pages 分支，并在首次发布时启用 Pages。使用本机 Git 凭据助手，不打印、存盘或嵌入令牌。不会强制推送。
+7. 等待仓库 Pages 构建成功，再验证线上首页、数据和建筑分块。
 
 如网络需要，可在执行命令的环境中提供 `HTTPS_PROXY` 与 Node.js 的 `NODE_USE_ENV_PROXY=1`，不要把代理账号或令牌提交至仓库。脚本不自动修改系统代理。
 
@@ -35,11 +36,11 @@ Agent 接入上海博物馆官方检索与 Crossref 学术元数据，每源最�
 
 `pages:export` 同时导出已审核资料及附件，并校验附件 SHA-256。文物关联的已审核资料会加入该文物图谱。知识库定义、生成流程及功能边界见 `docs/HERISK-platform-and-knowledge-base.md`，也可在“知识库与平台结构”页面查看并下载中英文说明。
 
-完整 SHP 数据量约 158 MB，分块按需加载并校验 SHA-256，浏览器最多保留约 12 MB 的分块缓存。相邻视图可以复用缓存，不要求静态服务器支持 Range 请求。
+建筑轮廓与四类风险值以 GeoParquet 分块发布：清理后几何为 EPSG:4326 WKB，四类风险沿用 Parquet 原始值，按 Web Mercator 14 级瓦片切分为 2,181 个文件（合计约 147 MB）。浏览器只解码当前视野覆盖的分块，缓存最近 48 个分块；放大到 12.6 级起直接绘制完整建筑面，不再把 TIF 栅格像素当作建筑。低缩放层级（12.6 级以下）显示由同一批建筑值聚合、高斯平滑的展示面，不使用源 TIF 栅格。静态文件逐个读取，不要求服务器支持 Range 请求。
 
 ## 文物档案知识图谱
 
-“文物档案”默认打开知识图谱，也可切换回原档案列表。全市视图把 767 处文物与档案中的行政区、保护等级、文物类型相连；行政区名称保留原始写法。点击分类查看直接关联文物，点击文物展开年代、材料、结构、保存状态、评价指标及来源文件。
+“文物档案”默认打开知识图谱，也可切换回原档案列表。全市视图把 763 处文物与档案中的行政区、保护等级、文物类型相连；行政区名称保留原始写法。点击分类查看直接关联文物，点击文物展开年代、材料、结构、保存状态、评价指标及来源文件。
 
 支持搜索、关系类型筛选、节点和画布拖动、缩放、重置视图、展开画布，以及导出当前可见关系 JSON。右侧提供可操作的实体与关系列表。点击评分节点或连线可查看原始分值、置信度、原文证据、推理依据和 Excel 工作表/行号，并下载来源文件或跳转对应评价档案。缺失评分保持为空；只有目录记录的文物不生成虚构评价指标。
 

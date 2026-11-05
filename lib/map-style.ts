@@ -21,7 +21,9 @@ export const baseLayers = [
   { id:'base-place-label', type:'symbol', source, 'source-layer':'place', filter:['in',['get','class'],['literal',['city','town','village','suburb','quarter','neighbourhood']]], layout:{'text-field':name,'text-font':font,'text-size':['interpolate',['linear'],['zoom'],7,11,13,14,18,16],'text-padding':12}, paint:{'text-color':'#6c7c70','text-halo-color':'#f2f4ef','text-halo-width':2} },
 ] as LayerSpecification[];
 
-export function createMapStyle(archiveUrl:string,theme:'light'|'dark'='light'):StyleSpecification {
+// Building footprints are not part of the static style: the map decodes them
+// from the GeoParquet tiles of the cleaned SHP for the current view.
+export function createMapStyle(theme:'light'|'dark'='light'):StyleSpecification {
   const themed=baseLayers.map(layer=>{const next=JSON.parse(JSON.stringify(layer));if(theme==='dark'&&darkPaint[layer.id])Object.assign(next.paint,darkPaint[layer.id]);return next as LayerSpecification;});
   const geometry=themed.filter(l=>l.type!=='symbol');
   const labels=themed.filter(l=>l.type==='symbol');
@@ -30,12 +32,8 @@ export function createMapStyle(archiveUrl:string,theme:'light'|'dark'='light'):S
     glyphs:'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
     sources:{
       openmaptiles:{type:'vector',url:'https://tiles.openfreemap.org/planet',attribution:'<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · © <a href="https://openmaptiles.org" target="_blank" rel="noopener">OpenMapTiles</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'},
-      buildings:{type:'vector',url:`pmtiles://${archiveUrl}`,attribution:'建筑轮廓：用户提供的清理后上海建筑 SHP'},
     },
-    layers:[...geometry,
-      {id:'building-fill',type:'fill',source:'buildings','source-layer':'buildings',minzoom:14,paint:{'fill-color':theme==='dark'?'#70827a':'#9eaead','fill-opacity':.55}},
-      {id:'building-outline',type:'line',source:'buildings','source-layer':'buildings',minzoom:14,paint:{'line-color':theme==='dark'?'#adbbac':'#7c8d87','line-width':.6,'line-opacity':.8}},
-      ...labels],
+    layers:[...geometry,...labels],
   };
 }
 

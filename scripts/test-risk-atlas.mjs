@@ -11,10 +11,14 @@ assert.equal(connectedRiskRegions(cells,0,1,2,false).length,0);
 assert.equal(connectedRiskRegions(cells,0,0).flat().length,3); // real zero included, missing excluded
 assert.equal(regionGeoJSON(connectedRiskRegions(cells,0,1,1,true)).features[0].properties.grid_area_km2,.5);
 const dir='public/risk-atlas/';const manifest=JSON.parse(fs.readFileSync(dir+'manifest.json'));const all=JSON.parse(fs.readFileSync(dir+'cells.json'));const points=JSON.parse(fs.readFileSync(dir+'points.json'));
-assert.equal(all.reduce((n,c)=>n+c.n,0),1570932);assert.equal(all.length,manifest.cell_count);assert.equal(points.length,767);assert.equal(new Set(points.map(p=>p.id)).size,767);assert.equal(points.filter(p=>p.risk_yulun_0_100===null).length,22);
+assert.equal(all.reduce((n,c)=>n+c.n,0),1570932);assert.equal(all.length,manifest.cell_count);assert.equal(points.length,763);assert.equal(new Set(points.map(p=>p.id)).size,763)
+assert.equal(manifest.point_count,763);assert.equal(manifest.raw_point_records,767);assert.equal(Object.keys(manifest.deduplicated_records).length,4);assert.equal(points.filter(p=>p.risk_yulun_0_100===null).length,22);
 for(const p of points)if(p.risk_yulun_0_100!==null)assert.ok(Math.abs(p.risk_yulun_0_100-(100-p.sentiment_score_0_100))<1e-8);
 assert.ok(manifest.statistics.risk_kaifa_smooth_sample.missing>=manifest.clean_geometry_audit.risk_unmatched_buildings);
-for(const r of Object.values(manifest.rasters)){assert.ok(fs.existsSync(dir+r.file));assert.equal(r.source_crs,'EPSG:32651');assert.ok(r.coordinates.every(([x,y])=>x>120&&x<124&&y>29&&y<33));}
+const buildings=JSON.parse(fs.readFileSync('public/buildings/manifest.json','utf8'));
+assert.equal(manifest.rasters,undefined,'the atlas no longer ships TIF-derived rasters');
+for(const key of ['bendi','kaifa','huodong','weihuapin']){const o=buildings.overviews[key];assert.ok(fs.existsSync('public/buildings/'+o.file));assert.ok(o.coordinates.length===4);assert.ok(o.coordinates.every(([x,y])=>x>120&&x<124&&y>29&&y<33));}
+assert.ok(Object.keys(buildings.tile_index).length>1500);assert.equal(buildings.source.buildings,1570932);
 const real=connectedRiskRegions(all,0,.7,3);assert.ok(real.length>0);assert.ok(real.flat().every(c=>c.mean[0]>=.7));
 console.log(JSON.stringify({passed:true,cells:all.length,buildings:1570932,points:points.length,regions:real.length}));
 

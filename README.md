@@ -6,7 +6,7 @@
 - GitHub：https://github.com/hanwanyin/LLM-history-buildings
 - 前端：React / Vinext；后端：Cloudflare Workers；数据库：D1；原始文件：R2。
 - 所有人可浏览；管理员通过 ChatGPT 登录，服务器依据 `ADMIN_EMAILS` 白名单限制写入。
-- 767 处文物、3,835 条 CSV 综合评分、20,304 条 Excel 明细、27 个指标、6 份来源文件。
+- 763 处文物对象（767 条源点位记录，4 条重复点位已合并）、3,835 条 CSV 综合评分、20,250 条 Excel 明细、27 个指标、6 份来源文件。
 - 数据库中保留原始行、来源工作表与行号。1,802 个空分值原样保留。15 处只有 CSV 评分；2 个 CSV 原值为 0，标注待核查。名称差异按编号关联并记录。
 - 专家修正独立存储，不覆盖原始评分；编辑采用版本校验，评价快照保留当时数据。
 
@@ -16,18 +16,21 @@
 
 ## 上海建筑地图
 
-开源地图引擎 MapLibre GL 使用 OpenFreeMap / OpenMapTiles 矢量道路水系底图。自定义样式仅允许道路、轨道、水系、绿地及中文地名，不渲染 OSM 建筑块，不使用含建筑的栅格底图。建筑轮廓唯一来源为用户提供的 1,570,826 个建筑面。建筑切成 14—16 级 PMTiles 矢量瓦片，放大时按 HTTP Range 从 R2 加载，支持继续放大到20级。不会一次把全市157万建筑下载到浏览器。底图按当前视野从 OpenFreeMap 请求，保留 OpenFreeMap、OpenMapTiles、OpenStreetMap 来源署名。样式定义在 `lib/map-style.ts`，建筑图层与底图透明度独立控制。
+开源地图引擎 MapLibre GL 使用 OpenFreeMap / OpenMapTiles 矢量道路水系底图。自定义样式仅允许道路、轨道、水系、绿地及中文地名，不渲染 OSM 建筑块，不使用含建筑的栅格底图。建筑轮廓唯一来源为用户提供的 1,570,932 个清理后建筑面。清理后几何与四类风险值写成 GeoParquet 分块（2,181 个 14 级 Web Mercator 瓦片，EPSG:4326，zstd），浏览器只解码当前视野的分块，放大后显示完整建筑面，支持继续放大到 20 级；低缩放层级显示由同一批建筑值聚合的高斯平滑展示面，不再使用 TIF 栅格像素冒充建筑。不会一次把全市 157 万建筑下载到浏览器。底图按当前视野从 OpenFreeMap 请求，保留 OpenFreeMap、OpenMapTiles、OpenStreetMap 来源署名。样式定义在 `lib/map-style.ts`，建筑图层与底图透明度独立控制。
 
 `上海建筑.zip` 同时包含 EPSG:4326 的 `shanghai.shp` 和 EPSG:32651 的 `shanghai51N.shp`；本项目只导入前者，距离在 UTM 51N 下计算。136处原始点落在建筑面内（其中1处重叠），566处为120米内近邻候选，65处无候选。候选点显示到建筑内部但明确标注待核查，保留原始点位；管理员可从前三个候选中核查并确认，确认结果与理由留档。几何邻近不等于已验证的文物身份；开放遗址等可能不对应建筑。
 
-准备地图需要 GDAL、Shapely、PyProj。将 `shanghai.*` 解压到忽略目录 `data/building-source/`，建立空间索引后运行 `python scripts/match-buildings.py`。生成PMTiles示例：
+准备地图需要 GDAL、Shapely、PyProj、PyArrow。将 `全部建筑地块_含文物属性_SHP.zip` 解压到忽略目录 `work/clean-buildings/`，运行 `python scripts/prepare-clean-buildings.py` 生成几何核验后的风险关联，再运行 `python scripts/prepare-building-parquet.py` 生成网页使用的 GeoParquet 分块与低缩放展示面：
 
 ```sh
-ogrinfo data/building-source/shanghai.shp -sql 'CREATE SPATIAL INDEX ON shanghai'
-ogr2ogr -f PMTiles data/shanghai-buildings.pmtiles data/building-source/shanghai.shp -sql 'SELECT FID AS building_id, Height FROM shanghai' -nln buildings -dsco MINZOOM=14 -dsco MAXZOOM=16 -dsco MAX_SIZE=5000000 -dsco MAX_FEATURES=200000 -dsco SIMPLIFICATION=0 -dsco SIMPLIFICATION_MAX_ZOOM=0
+python scripts/prepare-clean-buildings.py
+python scripts/prepare-building-parquet.py   # public/buildings/：2,181 个瓦片 + 4 张聚合展示面
+python scripts/prepare-risk-atlas.py         # public/risk-atlas/：763 处点位、500 米网格、边界
 ```
 
-追加本地迁移 `drizzle/0001_brief_agent_brand.sql` 后，用 `python scripts/seed-local.py data/spatial-seed.json` 导入匹配结果。生产环境运行同一个 `import-data.mjs`，stdin配置加 `seed_path: "data/spatial-seed.json"`；再运行 `node scripts/upload-map.mjs`，通过隐藏stdin提供 `url`、`token`（私有站点可附 `bypass`）。原始SHP及158MB瓦片不进入GitHub或Worker代码包，而存储在本地归档与R2地图对象中。
+`public/buildings/` 是生成产物，不进入 main；`npm run pages:build` 会在缺少该目录时停止并提示先运行上面的脚本。管理站仍保留 `/api/map/archive` 这一基于 R2 的 PMTiles 接口与 `scripts/upload-map.mjs`，但网页端已不再依赖它。
+
+追加本地迁移 `drizzle/0001_brief_agent_brand.sql` 后，用 `python scripts/seed-local.py data/spatial-seed.json` 导入匹配结果。生产环境运行同一个 `import-data.mjs`，stdin配置加 `seed_path: "data/spatial-seed.json"`；再运行 `node scripts/upload-map.mjs`，通过隐藏stdin提供 `url`、`token`（私有站点可附 `bypass`）。原始SHP与 GeoParquet 分块不进入 main 分支，发布时只写入 gh-pages 产物；本地归档仍在 `work/` 与 `public/buildings/`。
 
 “证据检索”查询已导入原文；“数据与来源”新增真实检索 Agent（上海博物馆官方检索、Crossref 学术元数据）和文件上传。新增资料先进入私有待审区，经管理员核对来源、文物关联并填写审核理由后公开。文件上限10MB，支持 XLSX、CSV、DOCX、TXT、MD、JSON、PDF；PDF 须提供原文摘录和页码。没有接入大模型、向量服务和 PDF OCR，不生成新的 AI 分值。明细均值仅为描述统计；CSV 综合评分独立保留。
 

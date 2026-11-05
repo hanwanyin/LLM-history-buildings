@@ -71,21 +71,9 @@ for (const source of sources.sources) {
   source.mirror_path = 'originals/' + filename;
   await fs.writeFile(path.join(staging, source.mirror_path), data);
 }
-// Small static shards work on GitHub Pages without HTTP Range support or files
-// above GitHub's 100 MB limit. Their ordered concatenation is the original archive.
-const archive = await fs.readFile('data/shanghai-buildings.pmtiles');
-const size = 1024 * 1024;
-const digest = createHash('sha256').update(archive).digest('hex');
-const directory = `map/${digest.slice(0, 16)}`;
-await fs.mkdir(path.join(staging, directory), { recursive: true });
-const shards = [];
-for (let start = 0; start < archive.length; start += size) {
-  const bytes = archive.subarray(start, Math.min(start + size, archive.length));
-  const file = `${directory}/${String(shards.length).padStart(4, '0')}.bin`;
-  await fs.writeFile(path.join(staging, file), bytes);
-  shards.push({ file, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') });
-}
-await write('map/archive.json', { version: 1, bytes: archive.length, chunk_size: size, sha256: digest, shards });
+// Building footprints are not exported here: scripts/prepare-building-parquet.py
+// writes spatially tiled GeoParquet from the cleaned SHP and the risk join, and
+// scripts/build-pages.mjs copies public/buildings into the published mirror.
 const knowledge=await request('knowledge/published');
 await fs.mkdir(path.join(staging,'knowledge-files'),{recursive:true});
 for(const doc of knowledge.documents){if(doc.filename){const bytes=await request('knowledge/download/'+encodeURIComponent(doc.id),true);if(createHash('sha256').update(bytes).digest('hex')!==doc.sha256)throw Error('Supplement checksum mismatch');await fs.writeFile(path.join(staging,'knowledge-files',doc.id),bytes);}}
@@ -93,7 +81,7 @@ await write('snapshot/knowledge.json',knowledge);
 await write('snapshot/bootstrap.json', boot);
 await write('snapshot/sources.json', sources);
 await write('snapshot/evidence.json', evidence);
-await write('snapshot/manifest.json', { ...boot.snapshot, stats: boot.stats, buildings_sha256: digest, building_archive_bytes: archive.length, site_count: details.length, score_count: evidence.length });
+await write('snapshot/manifest.json', { ...boot.snapshot, stats: boot.stats, site_count: details.length, score_count: evidence.length });
 await fs.rm(output, { recursive: true, force: true });
 await fs.rename(staging, output);
-console.log(JSON.stringify({ output, stats: boot.stats, exported_at: boot.snapshot.exported_at, shards: shards.length, archive_sha256: digest }));
+console.log(JSON.stringify({ output, stats: boot.stats, exported_at: boot.snapshot.exported_at }));

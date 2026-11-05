@@ -4,9 +4,9 @@ import {buildCatalogGraph,buildSiteGraph,filterGraph,graphDegrees,layoutGraph} f
 const read=async name=>JSON.parse(await fs.readFile('work/pages-public/snapshot/'+name+'.json','utf8'));
 const boot=await read('bootstrap'),detail=await read('sites/G-2');
 const graph=buildCatalogGraph(boot.sites),ids=new Set(graph.nodes.map(node=>node.id));
-assert.equal(graph.nodes.filter(node=>node.kind==='site').length,767);
+assert.equal(graph.nodes.filter(node=>node.kind==='site').length,763);
 assert.equal(ids.size,graph.nodes.length);
-assert.equal(graph.edges.length,767*3);
+assert.equal(graph.edges.length,763*3);
 for(const edge of graph.edges){
   assert.ok(ids.has(edge.source)&&ids.has(edge.target));
   const site=boot.sites.find(site=>site.id===edge.siteId),target=graph.nodes.find(node=>node.id===edge.target);

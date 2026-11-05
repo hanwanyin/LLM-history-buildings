@@ -4,14 +4,15 @@ import { useEffect, useRef, useState } from 'react';
 import type { Map as LibreMap, GeoJSONSource } from 'maplibre-gl';
 import { createMapStyle, baseOpacityUpdates, themePaintUpdates } from '../lib/map-style';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { api, isPages, assetUrl } from '../lib/client-data';
-import { ShardedPMTilesSource } from '../lib/sharded-pmtiles';
+import { api, assetUrl } from '../lib/client-data';
+import { loadBuildingManifest, loadBuildings, buildingCollection, type BuildingManifest } from '../lib/building-parquet';
 import { MapPin, ArrowUpRight, RotateCcw } from 'lucide-react';
 import {useTheme} from '../lib/theme';
 import {riskColors,scoreGrade} from '../lib/atlas-metrics';
 import {footprintAssets,type FootprintFocus} from '../lib/workspace-focus';
 type Row=Record<string,any>;
-let registered=false;
+const EMPTY_BUILDINGS={type:'FeatureCollection' as const,features:[]};
+const BUILDING_MIN_ZOOM=14;
 const emptyScores:Record<string,number|null>={};
 const matchLabels:Record<string,string>={inside:'原始点在建筑面内',candidate:'近邻建筑候选 · 待核查',overlap:'落在重叠建筑面 · 待核查',unmatched:'120米内未找到建筑',confirmed:'管理员已确认关联',source:'清理后SHP属性关联'};
 export default function HeritageMap({sites,onSelect,selectedId,admin=false,onUpdated,explorer=false,riskScores=emptyScores,colorByScore=false,resetKey=0,linkedSites,onSelectBuilding,focusedBuilding,focusRevision=0}:{sites:Row[];onSelect:(id:string)=>void;selectedId?:string;admin?:boolean;onUpdated?:()=>void;explorer?:boolean;riskScores?:Record<string,number|null>;colorByScore?:boolean;resetKey?:number;linkedSites?:Row[];onSelectBuilding?:(building:FootprintFocus)=>void;focusedBuilding?:FootprintFocus|null;focusRevision?:number}){
@@ -24,17 +25,18 @@ export default function HeritageMap({sites,onSelect,selectedId,admin=false,onUpd
   const linkedRef=useRef(linkedSites||sites),buildingRef=useRef(onSelectBuilding);linkedRef.current=linkedSites||sites;buildingRef.current=onSelectBuilding;
   sitesRef.current=sites;openRef.current=onSelect;
   useEffect(()=>{let alive=true;let resize:ResizeObserver|undefined;
-    (async()=>{const [lib,pm]=await Promise.all([import('maplibre-gl'),import('pmtiles')]);if(!alive||!el.current)return;
+    (async()=>{const lib=await import('maplibre-gl');if(!alive||!el.current)return;
       lib.setWorkerUrl(assetUrl('maplibre/worker.mjs'));
-      const archiveUrl=isPages?new URL(assetUrl('map/archive.json?v=clean-20261104'),window.location.origin).href:window.location.origin+'/api/map/archive?v=clean-20261104';
-      if(!registered){const protocol=new pm.Protocol();if(isPages)protocol.add(new pm.PMTiles(new ShardedPMTilesSource(archiveUrl,new URL(assetUrl(''),window.location.origin).href)));lib.addProtocol('pmtiles',protocol.tile);registered=true;}
-      const map=new lib.Map({container:el.current,center:[121.47,31.15],zoom:explorer?8.4:10,minZoom:4,maxZoom:20,attributionControl:{compact:true},style:createMapStyle(archiveUrl,theme)});
+      const map=new lib.Map({container:el.current,center:[121.47,31.15],zoom:explorer?8.4:10,minZoom:4,maxZoom:20,attributionControl:{compact:true},style:createMapStyle(theme)});
       mapRef.current=map;map.addControl(new lib.NavigationControl({showCompass:true}),explorer?'bottom-right':'top-right');map.addControl(new lib.ScaleControl({unit:'metric'}),'bottom-left');
       map.on('error',e=>{if(!alive)return;if((e as unknown as {sourceId?:string}).sourceId==='openmaptiles')setMapError('开源底图暂未加载，可继续查看建筑和文物图层。');else if((e as unknown as {sourceId?:string}).sourceId==='buildings')setMapError('建筑图层正在加载或暂不可用，请稍后重试。');});
       map.on('zoomend',()=>{if(alive)setZoom(map.getZoom());});
       map.on('load',()=>{if(!alive)return;
         const empty:any={type:'FeatureCollection',features:[]};
         for(const id of ['heritage','originals','selected-building','selected-line'])map.addSource(id,{type:'geojson',data:empty});
+        map.addSource('buildings',{type:'geojson',data:empty});
+        map.addLayer({id:'building-fill',type:'fill',source:'buildings',minzoom:BUILDING_MIN_ZOOM,paint:{'fill-color':theme==='dark'?'#70827a':'#9eaead','fill-opacity':.55}},'base-road-label');
+        map.addLayer({id:'building-outline',type:'line',source:'buildings',minzoom:BUILDING_MIN_ZOOM,paint:{'line-color':theme==='dark'?'#adbbac':'#7c8d87','line-width':.6,'line-opacity':.8}},'base-road-label');
         map.addLayer({id:'selected-building-fill',type:'fill',source:'selected-building',paint:{'fill-color':'#139681','fill-opacity':.48}},'base-road-label');
         map.addLayer({id:'selected-building-line',type:'line',source:'selected-building',paint:{'line-color':'#05705f','line-width':2.2}},'base-road-label');
         map.addLayer({id:'originals',type:'circle',source:'originals',layout:{visibility:'none'},paint:{'circle-radius':4,'circle-color':'#667389','circle-stroke-color':'#fff','circle-stroke-width':1}});
@@ -57,6 +59,16 @@ export default function HeritageMap({sites,onSelect,selectedId,admin=false,onUpd
     })().catch(e=>{if(alive)setError('地图初始化失败：'+e.message);});
     return()=>{alive=false;resize?.disconnect();pending.current?.abort();mapRef.current?.remove();mapRef.current=null;};
   },[]);
+  useEffect(()=>{const map=mapRef.current;if(!ready||!map)return;let alive=true,timer:any=null,controller:AbortController|null=null,manifest:BuildingManifest|null=null;
+    // Footprints come from the cleaned-SHP GeoParquet tiles under the view only.
+    const load=async()=>{controller?.abort();controller=new AbortController();const source=map.getSource('buildings') as GeoJSONSource|undefined;if(!source)return;
+      if(map.getZoom()<BUILDING_MIN_ZOOM){source.setData(EMPTY_BUILDINGS as any);return;}
+      const b=map.getBounds();
+      try{manifest??=await loadBuildingManifest();const features=await loadBuildings(manifest,[[b.getWest(),b.getSouth()],[b.getEast(),b.getNorth()]],controller.signal);if(!alive||controller.signal.aborted)return;source.setData(buildingCollection(features) as any);}
+      catch(e){if((e as Error).name!=='AbortError')setMapError('建筑 GeoParquet 分块暂未加载，请放大地图后重试。');}};
+    const schedule=()=>{clearTimeout(timer);timer=setTimeout(load,140);};
+    map.on('moveend',schedule);map.on('zoomend',schedule);load();
+    return()=>{alive=false;clearTimeout(timer);controller?.abort();map.off('moveend',schedule);map.off('zoomend',schedule);};},[ready]);
   useEffect(()=>{const map=mapRef.current;if(!ready||!map)return;
     const valid=sites.filter(s=>Number.isFinite(s.longitude)&&Number.isFinite(s.latitude));
     (map.getSource('heritage') as GeoJSONSource).setData({type:'FeatureCollection',features:valid.map(s=>({type:'Feature',geometry:{type:'Point',coordinates:[s.map_lon??s.longitude,s.map_lat??s.latitude]},properties:{id:s.id,status:s.match_status||'unmatched',name:s.name,risk:riskColors[scoreGrade(riskScores[s.id])]}}))});
