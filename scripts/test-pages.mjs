@@ -29,7 +29,7 @@ for (const row of detail.dimensions) assert.equal(boot.mapScores.find(score => s
 assert.deepEqual(await client.api('map/match/G-1'), detail.spatial);
 const missingDetail = await client.api('sites/' + boot.sites.find(row => row.detail_count === 0).id);
 assert.equal(missingDetail.scores.length, 0); assert.equal(missingDetail.dimensions.length, 5);
-for (const route of ['reviews', 'assessments', 'sites/G-1', 'spatial-confirm']) await assert.rejects(client.api(route, { method: 'POST' }), /公开浏览版/);
+for (const route of ['reviews', 'assessments', 'sites/G-1', 'spatial-confirm']) await assert.rejects(client.api(route, { method: 'POST' }), /只读镜像/);
 const empty = await client.api('evidence'); assert.equal(empty.total, 0);
 const evidence = await client.api('evidence?site=G-1'); assert.equal(evidence.total, 27);
 const search = await client.api('evidence?q=' + encodeURIComponent('故居 历史'));

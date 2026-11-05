@@ -21,7 +21,7 @@ export async function api(path: string, options: RequestInit = {}): Promise<Row>
     if (!response.ok) throw Error(data.error || '请求失败');
     return data;
   }
-  if (options.method && options.method.toUpperCase() !== 'GET') throw Error('此站为公开浏览版。请前往原管理站修改，再同步发布到此站。');
+  if (options.method && options.method.toUpperCase() !== 'GET') throw Error('此站为只读镜像。修改档案、复核或建筑关联请前往原管理站，再同步发布到此站。');
   const url = new URL(path, 'https://snapshot.invalid/');
   const parts = url.pathname.slice(1).split('/').map(decodeURIComponent);
   if (parts[0] === 'knowledge' && parts[1] === 'published') return snapshot('knowledge', options);
