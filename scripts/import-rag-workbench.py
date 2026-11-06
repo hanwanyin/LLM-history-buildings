@@ -11,17 +11,10 @@ for d in report['documents']:
  p=root/'RAG_datasource'/d['filename'];sha=hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() else None
  docs.append({**clean(d),'current_sha256':sha,'verified':sha==d['file_hash']})
 if not all(d['verified'] for d in docs):raise SystemExit('Source hash mismatch: rerun extraction and review before importing')
-if {p.name for p in (root/'RAG_datasource').glob('*.pdf')}!={d['filename'] for d in docs}:raise SystemExit('Source inventory differs from extraction: process missing/new documents first')
+if {p.name for p in (root/'RAG_datasource').glob('*.pdf') if not p.name.startswith('._')}!={d['filename'] for d in docs}:raise SystemExit('Source inventory differs from extraction: process missing/new documents first')
 summary=json.loads((src/'completion_summary.json').read_text());ind=clean(json.loads((src/'indicators.json').read_text()))
 (out/'manifest.json').write_text(json.dumps({'summary':summary,'documents':docs,'candidates':len(ind),'scope':'41 provided documents; extracted candidates require review'},ensure_ascii=False))
 (out/'indicators.json').write_text(json.dumps(ind,ensure_ascii=False))
 graph=clean(json.loads((src/'knowledge_graph.json').read_text()))
 (out/'knowledge_graph.json').write_text(json.dumps(graph,ensure_ascii=False,separators=(',',':')))
-for name in ['knowledge_graph.html','evidence_browser.html','topic_graph.html']:
- s=(src/name).read_text();s=re.sub(r'D:\\\\课题\\\\十四五文物资源\\\\rag_workbench\\\\RAG_datasource\\\\','',s)
- if name=='knowledge_graph.html':
-  s=s.replace("el('h2',n.label,$('detail'));","el('h2',n.label,$('detail'));const criteriaButton=el('button','基于此实体查找候选指标标准',$('detail'));criteriaButton.addEventListener('click',()=>parent.postMessage({type:'herisk-graph-criteria',label:n.label},'*'));")
- (out/name).write_text(s)
-# Keep the supplied prototype available, with its simulation notices intact.
-(out/'reference-workbench.html').write_text((root/'index.html').read_text())
 print(json.dumps({'documents':len(docs),'verified':sum(d['verified'] for d in docs),'candidates':len(ind)},ensure_ascii=False))

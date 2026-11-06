@@ -22,7 +22,7 @@ export function WorkflowOverview({boot,onNavigate,localCount=0}:{boot:Row;onNavi
  const {locale}=useLocale(),en=locale==='en',tr=(a:string,b:string)=>en?b:a;
  const [research,setResearch]=useState<Row|null>(null);
  useEffect(()=>{const c=new AbortController();fetch(assetUrl('research/manifest.json'),{signal:c.signal}).then(r=>r.ok?r.json():null).then(d=>{if(d)setResearch(d);}).catch(()=>{});return()=>c.abort();},[]);
- const facts:Record<string,string>=[
+ const facts:string[]=[
   `${Number(boot.stats.sites).toLocaleString()} ${tr('处文物','objects')}`,
   research?`${research.summary.documents} ${tr('份资料','documents')} · ${Number(research.candidates).toLocaleString()} ${tr('条候选指标','candidate records')}`:tr('资料图谱与标准草案','Document graph & criteria'),
   `${boot.stats.indicators} ${tr('项指标','indicators')} · ${Number(boot.stats.scores).toLocaleString()} ${tr('条明细','records')}`,

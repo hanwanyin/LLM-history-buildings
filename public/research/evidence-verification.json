@@ -1,0 +1,11 @@
+{
+  "schema": "herisk-pdf-evidence-v1",
+  "source": "RAG_datasource",
+  "documents": 41,
+  "input_claims": 5138,
+  "matched_claims": 5138,
+  "excluded_claims": 0,
+  "unique_excerpts": 4834,
+  "verification": "PDF file hashes match the extraction manifest; quotations match the cached physical page after whitespace and Unicode normalization. Semantic applicability requires expert review.",
+  "excluded": []
+}
