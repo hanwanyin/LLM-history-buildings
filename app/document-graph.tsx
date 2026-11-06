@@ -7,17 +7,18 @@ import {useTheme} from '../lib/theme';
 import {filterDocumentGraph,indexDocumentGraph,layoutDocumentGraph,type DocumentGraph,type DocumentNode,type DocumentEdge} from '../lib/document-graph';
 import './document-graph.css';
 const typeEnglish:Record<string,string>={'人类活动':'Human activity','应对措施':'Interventions','压力扰动':'Disturbance','文物对象':'Heritage assets','损伤影响':'Damage & impacts','评价指标':'Indicators','遗产属性':'Heritage attributes','敏感性条件':'Sensitivity conditions','作用机制':'Mechanisms'};
-const palette=['#4f927c','#a38a51','#6c8fa5','#9583ae','#b46f78','#809550','#67a5a7','#b18461','#8a94ae'];
+const palette=['#367ab5','#5b9c82','#c38d4d','#9974b3','#5f9faf','#c07682','#7d8b56','#7687aa','#8a94ae'];
+const paletteDark=['#6fa8dd','#7fc3a6','#e0b070','#bb9ad6','#84c2cf','#dfa0aa','#a9b878','#9fb3d4','#a9b4c6'];
 export default function DocumentGraphView({onCriteria}:{onCriteria:(label:string,documents:string[])=>void}){
  const {locale}=useLocale(),{theme}=useTheme(),tr=(zh:string,en:string)=>locale==='en'?en:zh;
- const [data,setData]=useState<DocumentGraph|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0),[query,setQuery]=useState(''),[type,setType]=useState(''),[doc,setDoc]=useState(''),[focus,setFocus]=useState<string|null>(null),[edgeId,setEdgeId]=useState<string|null>(null),[page,setPage]=useState(0),[view,setView]=useState({x:0,y:0,k:1}),[compact,setCompact]=useState(true);
+ const [data,setData]=useState<DocumentGraph|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0),[query,setQuery]=useState(''),[type,setType]=useState(''),[doc,setDoc]=useState(''),[focus,setFocus]=useState<string|null>(null),[edgeId,setEdgeId]=useState<string|null>(null),[page,setPage]=useState(0),[view,setView]=useState({x:0,y:0,k:1}),[compact,setCompact]=useState(false);
  const canvas=useRef<HTMLCanvasElement>(null),stage=useRef<HTMLDivElement>(null),drag=useRef<{x:number;y:number;view:typeof view;moved:boolean;id:number}|null>(null);
  const [size,setSize]=useState({w:900,h:640});
  useEffect(()=>{const c=new AbortController();setError('');fetch(assetUrl('research/knowledge_graph.json'),{signal:c.signal}).then(r=>{if(!r.ok)throw Error(String(r.status));return r.json();}).then(d=>setData(d as DocumentGraph)).catch(e=>{if(e.name!=='AbortError')setError(e.message);});return()=>c.abort();},[retry]);
  useEffect(()=>{if(!stage.current)return;const ro=new ResizeObserver(([e])=>setSize({w:e.contentRect.width,h:e.contentRect.height}));ro.observe(stage.current);return()=>ro.disconnect();},[]);
  const index=useMemo(()=>data?indexDocumentGraph(data):null,[data]);
  const types=useMemo(()=>data?[...new Set(data.nodes.flatMap(n=>n.types))].sort():[],[data]);
- const color=(n:DocumentNode)=>palette[Math.max(0,types.indexOf(n.types[0]))%palette.length];
+ const color=(n:DocumentNode)=>(theme==='dark'?paletteDark:palette)[Math.max(0,types.indexOf(n.types[0]))%palette.length];
  const componentSize=useMemo(()=>{const sizes=new Map<string,number>();if(!index)return sizes;const seen=new Set<string>();for(const id of index.nodes.keys()){if(seen.has(id))continue;const stack=[id];seen.add(id);const group:string[]=[];while(stack.length){const v=stack.pop()!;group.push(v);for(const e of index.adjacent.get(v)||[]){const w=e.source===v?e.target:e.source;if(!seen.has(w)){seen.add(w);stack.push(w);}}}for(const v of group)sizes.set(v,group.length);}return sizes;},[index]);
  const filtered=useMemo(()=>data?filterDocumentGraph(data,query,type,doc,focus):{nodes:[],edges:[]},[data,query,type,doc,focus]);
  const visible=useMemo(()=>{if(!compact||focus)return filtered;const keep=new Set(filtered.nodes.filter(n=>(componentSize.get(n.id)||0)>=3).map(n=>n.id));return {nodes:filtered.nodes.filter(n=>keep.has(n.id)),edges:filtered.edges.filter(e=>keep.has(e.source)&&keep.has(e.target))};},[filtered,compact,focus,componentSize]);
@@ -31,8 +32,33 @@ export default function DocumentGraphView({onCriteria}:{onCriteria:(label:string
   const c=canvas.current,ctx=c?.getContext('2d');if(!ctx||!c)return;const dpr=Math.min(window.devicePixelRatio||1,2);c.width=size.w*dpr;c.height=size.h*dpr;ctx.scale(dpr,dpr);ctx.clearRect(0,0,size.w,size.h);
   const dark=theme==='dark';ctx.fillStyle=dark?'#3a4b41':'#ced8ce';for(let x=12;x<size.w;x+=22)for(let y=12;y<size.h;y+=22){ctx.beginPath();ctx.arc(x,y,.6,0,Math.PI*2);ctx.fill();}
   for(const e of visible.edges){const a=positions.get(e.source),b=positions.get(e.target);if(!a||!b)continue;const p=screen(a),q=screen(b),active=e.id===edgeId;ctx.strokeStyle=active?(dark?'#e2ce91':'#8b733e'):(dark?'#759b8b':'#92b1a1');ctx.globalAlpha=active?1:visible.nodes.length>500?.35:.6;ctx.lineWidth=active?2.3:1;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();if(focus&&view.k>.7){const dx=q.x-p.x,dy=q.y-p.y,d=Math.hypot(dx,dy)||1,x=q.x-dx/d*9,y=q.y-dy/d*9;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-dx/d*6+dy/d*3,y-dy/d*6-dx/d*3);ctx.lineTo(x-dx/d*6-dy/d*3,y-dy/d*6+dx/d*3);ctx.closePath();ctx.fillStyle=ctx.strokeStyle;ctx.fill();}}
-  const labels=new Set(entities.slice(0,visible.nodes.length<=35?35:12).map(n=>n.id));
-  for(const n of visible.nodes){const p=positions.get(n.id);if(!p)continue;const q=screen(p),degree=index?.adjacent.get(n.id)?.length||0,r=visible.nodes.length>500?Math.min(5,1.5+Math.sqrt(degree)*.45):Math.min(10,4+Math.sqrt(degree)*.6);if(q.x< -50||q.x>size.w+50||q.y< -50||q.y>size.h+50)continue;ctx.globalAlpha=1;ctx.fillStyle=color(n);ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill();ctx.lineWidth=n.id===focus?3:1;ctx.strokeStyle=n.id===focus?(dark?'#e2ce91':'#8b733e'):(dark?'#17211d':'#fcfcf7');ctx.stroke();if(labels.has(n.id)||n.id===focus){ctx.font=`${n.id===focus?'600 ':''}11px system-ui, sans-serif`;const text=n.label.length>22?n.label.slice(0,21)+'…':n.label;ctx.lineWidth=3;ctx.strokeStyle=dark?'#17211d':'#edf1e9';ctx.strokeText(text,q.x+r+4,q.y+3);ctx.fillStyle=dark?'#e4e6da':'#243a32';ctx.fillText(text,q.x+r+4,q.y+3);}}
+  const labels=new Set((visible.nodes.length<=400?entities:entities.filter(n=>(componentSize.get(n.id)||0)>=20)).slice(0,visible.nodes.length<=120?24:20).map(n=>n.id));
+  for(const n of visible.nodes){const p=positions.get(n.id);if(!p)continue;const q=screen(p),degree=index?.adjacent.get(n.id)?.length||0,central=(componentSize.get(n.id)||0)>=20;
+  const grow=Math.max(.8,Math.min(2.6,Math.sqrt(view.k))),r=(central?3.1:1.35)*grow;
+  if(q.x< -50||q.x>size.w+50||q.y< -50||q.y>size.h+50)continue;
+  ctx.globalAlpha=central?1:.85;ctx.fillStyle=color(n);ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill();
+  ctx.lineWidth=n.id===focus?Math.max(2.4,r*.8):Math.max(1,r*.55);ctx.strokeStyle=n.id===focus?'#ecad44':(dark?'#101915':'#ffffff');ctx.stroke();ctx.globalAlpha=1;
+  }
+  // Second pass: labels for hubs, focus and neighbours, skipping overlaps so
+  // the 12.5 px text stays readable in dense clusters.
+  const candidates:number[]=[];
+  if(focus!=null)candidates.push(focus);
+  for(const id of labels)candidates.push(id);
+  for(const n of visible.nodes){if(focus==null)break;const adj=(index?.adjacent.get(focus)||[]);if(adj.some(e=>e.source===n.id||e.target===n.id))candidates.push(n.id);}
+  const order=[...new Set(candidates)].sort((a,b)=>(b===focus?1:0)-(a===focus?1:0)||(index?.adjacent.get(b)?.length||0)-(index?.adjacent.get(a)?.length||0));
+  const placed:{x1:number;y1:number;x2:number;y2:number}[]=[];
+  for(const id of order){
+   const indexNode=index?.nodes.get(id);const p=positions.get(id);if(!indexNode||!p)continue;
+   const q=screen(p),degree=index?.adjacent.get(id)?.length||0,central=(componentSize.get(id)||0)>=20;
+   if(q.x<-20||q.x>size.w+20||q.y<-20||q.y>size.h+20)continue;
+   const grow=Math.max(.8,Math.min(2.6,Math.sqrt(view.k))),r=(central?3.1:1.35)*grow;
+   ctx.font=`${id===focus||central?'600 ':'400 '}12.5px "PingFang SC", system-ui, sans-serif`;
+   const text=indexNode.label.length>18?indexNode.label.slice(0,17)+'…':indexNode.label;
+   const w=ctx.measureText(text).width,left=q.x+r+5,top=q.y-9,box={x1:left,y1:top,x2:left+w,y2:top+15};
+   if(id!==focus&&placed.some(b=>box.x1<b.x2+3&&box.x2>b.x1-3&&box.y1<b.y2+2&&box.y2>b.y1-2))continue;
+   ctx.lineWidth=3.6;ctx.strokeStyle=dark?'#101915':'#ffffff';ctx.strokeText(text,left,q.y+3.5);
+   ctx.fillStyle=dark?'#e8efe2':'#253d55';ctx.fillText(text,left,q.y+3.5);placed.push(box);
+  }
   ctx.globalAlpha=1;
  },[size,positions,view,theme,visible,focus,edgeId,entities,index,types]);
  function zoom(factor:number,x=size.w/2,y=size.h/2){setView(v=>{const k=Math.max(.4,Math.min(30,v.k*factor)),r=k/v.k;return {k,x:x-(x-v.x)*r,y:y-(y-v.y)*r};});}
